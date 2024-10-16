@@ -1,4 +1,4 @@
-import { log, noop } from "@proto-kit/common";
+import { log, mapSequential, noop } from "@proto-kit/common";
 
 import { SequencerModule } from "../../sequencer/builder/SequencerModule";
 import { TaskPayload } from "../flow/Task";
@@ -40,32 +40,52 @@ export class LocalTaskQueue
     [key: string]: QueueListener[];
   } = {};
 
-  private workNextTasks() {
-    Object.entries(this.queues).forEach((queue) => {
+  private taskInProgress = false;
+
+  private async workNextTasks() {
+    if (this.taskInProgress) {
+      return;
+    }
+    this.taskInProgress = true;
+
+    // Collect all tasks
+    const tasksToExecute = Object.entries(this.queues).flatMap((queue) => {
       const [queueName, tasks] = queue;
 
       if (tasks.length > 0) {
-        tasks.forEach((task) => {
+        const functions = tasks.map((task) => async () => {
           // Execute task in worker
 
-          void this.workers[queueName].handler(task.payload).then((payload) => {
-            if (payload === "closed") {
-              return;
-            }
-            log.trace("LocalTaskQueue got", JSON.stringify(payload));
-            // Notify listeners about result
-            const listenerPromises = this.listeners[queueName].map(
-              async (listener) => {
-                await listener(payload);
-              }
-            );
-            void Promise.all(listenerPromises);
-          });
-        });
-      }
+          const payload = await this.workers[queueName].handler(task.payload);
 
-      this.queues[queue[0]] = [];
+          if (payload === "closed") {
+            return;
+          }
+          log.trace("LocalTaskQueue got", JSON.stringify(payload));
+          // Notify listeners about result
+          const listenerPromises = this.listeners[queueName].map(
+            async (listener) => {
+              await listener(payload);
+            }
+          );
+          await Promise.all(listenerPromises);
+        });
+
+        this.queues[queue[0]] = [];
+        return functions;
+      }
+      return [];
     });
+
+    // Execute all tasks
+    await mapSequential(tasksToExecute, async (task) => await task());
+
+    this.taskInProgress = false;
+
+    // In case new tasks came up in the meantime, execute them as well
+    if (tasksToExecute.length > 0) {
+      await this.workNextTasks();
+    }
   }
 
   public createWorker(
@@ -89,16 +109,14 @@ export class LocalTaskQueue
       handler: async (data: TaskPayload) => {
         await sleep(this.config.simulatedDuration ?? 0);
 
-        const result = await executor(data);
-
-        return result;
+        return await executor(data);
       },
 
       close,
     };
 
     this.workers[queueName] = worker;
-    this.workNextTasks();
+    void this.workNextTasks();
 
     return worker;
   }
