@@ -137,8 +137,8 @@ export class PrivateMempool extends SequencerModule implements Mempool {
 
     while (
       queue.length > 0 &&
-      (limit !== undefined ? sortedTransactions.length < limit : true)
-      ) {
+      sortedTransactions.length < (limit ?? Number.MAX_VALUE)
+    ) {
       const [tx] = queue.splice(0, 1);
       const txStateService = new CachedStateService(baseService);
       stateServiceProvider.setCurrentStateService(txStateService);
