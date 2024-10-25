@@ -5,44 +5,13 @@ import { TypedClass } from "../types";
 
 import { MerkleTreeStore } from "./MerkleTreeStore";
 import { InMemoryMerkleTreeStorage } from "./InMemoryMerkleTreeStorage";
+import { AbstractMerkleWitness, StructTemplate } from "./RollupMerkleTree";
 
 class LinkedLeaf extends Struct({
   value: Field,
   path: Field,
   nextPath: Field,
 }) {}
-
-class StructTemplate extends Struct({
-  path: Provable.Array(Field, 0),
-  isLeft: Provable.Array(Bool, 0),
-}) {}
-
-export interface AbstractLinkedMerkleWitness extends StructTemplate {
-  height(): number;
-
-  /**
-   * Calculates a root depending on the leaf value.
-   * @param leaf Value of the leaf node that belongs to this Witness.
-   * @returns The calculated root.
-   */
-  calculateRoot(hash: Field): Field;
-
-  /**
-   * Calculates the index of the leaf node that belongs to this Witness.
-   * @returns Index of the leaf.
-   */
-  calculateIndex(): Field;
-
-  checkMembership(root: Field, key: Field, value: Field): Bool;
-
-  checkMembershipGetRoots(
-    root: Field,
-    key: Field,
-    value: Field
-  ): [Bool, Field, Field];
-
-  toShortenedEntries(): string[];
-}
 
 export interface AbstractLinkedMerkleTree {
   store: MerkleTreeStore;
@@ -78,7 +47,7 @@ export interface AbstractLinkedMerkleTree {
    * @param index Position of the leaf node.
    * @returns The witness that belongs to the leaf.
    */
-  getWitness(index: bigint): AbstractLinkedMerkleWitness;
+  getWitness(index: bigint): AbstractMerkleWitness;
 
   /**
    * Fills all leaves of the tree.
@@ -90,8 +59,8 @@ export interface AbstractLinkedMerkleTree {
 export interface AbstractLinkedMerkleTreeClass {
   new (store: MerkleTreeStore): AbstractLinkedMerkleTree;
 
-  WITNESS: TypedClass<AbstractLinkedMerkleWitness> &
-    typeof StructTemplate & { dummy: () => AbstractLinkedMerkleWitness };
+  WITNESS: TypedClass<AbstractMerkleWitness> &
+    typeof StructTemplate & { dummy: () => AbstractMerkleWitness };
 
   HEIGHT: number;
 
@@ -108,7 +77,7 @@ export function createLinkedMerkleTree(
       path: Provable.Array(Field, height - 1),
       isLeft: Provable.Array(Bool, height - 1),
     })
-    implements AbstractLinkedMerkleWitness
+    implements AbstractMerkleWitness
   {
     public static height = height;
 
@@ -122,12 +91,13 @@ export function createLinkedMerkleTree(
      * @returns The calculated root.
      */
     public calculateRoot(leaf: LinkedLeaf): Field {
-      let hash = leaf;
+      let hash = Poseidon.hash([leaf.value, leaf.path, leaf.nextPath]);
       const n = this.height();
 
       for (let index = 1; index < n; ++index) {
         const isLeft = this.isLeft[index - 1];
 
+        // eslint-disable-next-line @typescript-eslint/no-use-before-define
         const [left, right] = maybeSwap(isLeft, hash, this.path[index - 1]);
         hash = Poseidon.hash([left, right]);
       }

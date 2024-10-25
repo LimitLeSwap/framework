@@ -6,7 +6,7 @@ import { TypedClass } from "../types";
 import { MerkleTreeStore } from "./MerkleTreeStore";
 import { InMemoryMerkleTreeStorage } from "./InMemoryMerkleTreeStorage";
 
-class StructTemplate extends Struct({
+export class StructTemplate extends Struct({
   path: Provable.Array(Field, 0),
   isLeft: Provable.Array(Bool, 0),
 }) {}
