@@ -3,7 +3,7 @@ import { Bool, Field, Poseidon, Provable, Struct } from "o1js";
 import { range } from "../utils";
 import { TypedClass } from "../types";
 
-import { MerkleTreeStore } from "./MerkleTreeStore";
+import { LinkedMerkleTreeStore } from "./LinkedMerkleTreeStore";
 import { InMemoryMerkleTreeStorage } from "./InMemoryMerkleTreeStorage";
 import { AbstractMerkleWitness, StructTemplate } from "./RollupMerkleTree";
 
@@ -14,7 +14,7 @@ class LinkedLeaf extends Struct({
 }) {}
 
 export interface AbstractLinkedMerkleTree {
-  store: MerkleTreeStore;
+  store: LinkedMerkleTreeStore;
   readonly leafCount: bigint;
 
   assertIndexRange(index: bigint): void;
@@ -57,7 +57,7 @@ export interface AbstractLinkedMerkleTree {
 }
 
 export interface AbstractLinkedMerkleTreeClass {
-  new (store: MerkleTreeStore): AbstractLinkedMerkleTree;
+  new (store: LinkedMerkleTreeStore): AbstractLinkedMerkleTree;
 
   WITNESS: TypedClass<AbstractMerkleWitness> &
     typeof StructTemplate & { dummy: () => AbstractMerkleWitness };
@@ -179,9 +179,9 @@ export function createLinkedMerkleTree(
     // private in interface
     readonly zeroes: bigint[];
 
-    readonly store: MerkleTreeStore;
+    readonly store: LinkedMerkleTreeStore;
 
-    public constructor(store: MerkleTreeStore) {
+    public constructor(store: LinkedMerkleTreeStore) {
       this.store = store;
       this.zeroes = [0n];
       for (let index = 1; index < AbstractRollupMerkleTree.HEIGHT; index += 1) {
