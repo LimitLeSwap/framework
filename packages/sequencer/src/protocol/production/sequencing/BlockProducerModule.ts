@@ -113,7 +113,9 @@ export class BlockProducerModule extends SequencerModule<BlockConfig> {
           return undefined;
         }
 
-        log.info(`Produced block (${block.transactions.length} txs)`);
+        log.info(
+          `Produced block #${block.height.toBigInt()} (${block.transactions.length} txs)`
+        );
         this.prettyPrintBlockContents(block);
 
         // Generate metadata for next block
@@ -147,7 +149,7 @@ export class BlockProducerModule extends SequencerModule<BlockConfig> {
     txs: PendingTransaction[];
     metadata: BlockWithResult;
   }> {
-    const txs = (await this.mempool.getTxs()).slice(0, this.maximumBlockSize());
+    const txs = await this.mempool.getTxs(this.maximumBlockSize());
 
     const parentBlock = await this.blockQueue.getLatestBlock();
 

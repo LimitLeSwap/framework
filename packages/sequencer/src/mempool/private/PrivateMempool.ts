@@ -26,6 +26,7 @@ import {
 } from "../../sequencer/executor/Sequencer";
 import { CachedStateService } from "../../state/state/CachedStateService";
 import { AsyncStateService } from "../../state/async/AsyncStateService";
+import { distinctByPredicate } from "../../helpers/utils";
 
 type MempoolTransactionPaths = {
   transaction: PendingTransaction;
@@ -59,7 +60,7 @@ export class PrivateMempool extends SequencerModule implements Mempool {
       const success = await this.transactionStorage.pushUserTransaction(tx);
       if (success) {
         this.events.emit("mempool-transaction-added", tx);
-        log.info(
+        log.trace(
           `Transaction added to mempool: ${tx.hash().toString()} (${(await this.transactionStorage.getPendingUserTransactions()).length} transactions in mempool)`
         );
       } else {
@@ -92,7 +93,7 @@ export class PrivateMempool extends SequencerModule implements Mempool {
     return result?.result.afterNetworkState;
   }
 
-  public async getTxs(): Promise<PendingTransaction[]> {
+  public async getTxs(limit?: number): Promise<PendingTransaction[]> {
     const txs = await this.transactionStorage.getPendingUserTransactions();
 
     const baseCachedStateService = new CachedStateService(this.stateService);
@@ -104,7 +105,8 @@ export class PrivateMempool extends SequencerModule implements Mempool {
       txs,
       baseCachedStateService,
       this.protocol.stateServiceProvider,
-      networkState
+      networkState,
+      limit
     );
     this.protocol.stateServiceProvider.popCurrentStateService();
     return sortedTxs;
@@ -119,7 +121,8 @@ export class PrivateMempool extends SequencerModule implements Mempool {
     transactions: PendingTransaction[],
     baseService: CachedStateService,
     stateServiceProvider: StateServiceProvider,
-    networkState: NetworkState
+    networkState: NetworkState,
+    limit?: number
   ) {
     const executionContext = container.resolve<RuntimeMethodExecutionContext>(
       RuntimeMethodExecutionContext
@@ -130,7 +133,13 @@ export class PrivateMempool extends SequencerModule implements Mempool {
     const sortedTransactions: PendingTransaction[] = [];
     const skippedTransactions: Record<string, MempoolTransactionPaths> = {};
 
-    for (const [index, tx] of transactions.entries()) {
+    let queue: PendingTransaction[] = [...transactions];
+
+    while (
+      queue.length > 0 &&
+      (limit !== undefined ? sortedTransactions.length < limit : true)
+      ) {
+      const [tx] = queue.splice(0, 1);
       const txStateService = new CachedStateService(baseService);
       stateServiceProvider.setCurrentStateService(txStateService);
       const contextInputs: RuntimeMethodExecutionData = {
@@ -146,37 +155,32 @@ export class PrivateMempool extends SequencerModule implements Mempool {
         transaction: signedTransaction.transaction,
         signature: signedTransaction.signature,
       });
-      delete transactions[index];
       const { status, statusMessage, stateTransitions } =
         executionContext.current().result;
 
       if (status.toBoolean()) {
-        log.info(`Accepted tx ${tx.hash().toString()}`);
+        log.trace(`Accepted tx ${tx.hash().toString()}`);
         sortedTransactions.push(tx);
         // eslint-disable-next-line no-await-in-loop
         await txStateService.applyStateTransitions(stateTransitions);
         // eslint-disable-next-line no-await-in-loop
         await txStateService.mergeIntoParent();
-        stateServiceProvider.popCurrentStateService();
         delete skippedTransactions[tx.hash().toString()];
         if (Object.entries(skippedTransactions).length > 0) {
           // eslint-disable-next-line @typescript-eslint/no-loop-func
           stateTransitions.forEach((st) => {
             Object.values(skippedTransactions).forEach((value) => {
               if (value.paths.some((x) => x.equals(st.path))) {
-                transactions.push(value.transaction);
+                queue.push(value.transaction);
               }
             });
           });
-
-          // eslint-disable-next-line no-param-reassign
-          transactions = transactions.filter(
-            (id, idx, arr) => arr.indexOf(id) === idx
-          );
+          queue = queue.filter(distinctByPredicate((a, b) => a === b));
         }
       } else {
-        log.info(`Skipped tx ${tx.hash().toString()} because ${statusMessage}`);
-        this.protocol.stateServiceProvider.popCurrentStateService();
+        log.trace(
+          `Skipped tx ${tx.hash().toString()} because ${statusMessage}`
+        );
         if (!(tx.hash().toString() in skippedTransactions)) {
           skippedTransactions[tx.hash().toString()] = {
             transaction: tx,
@@ -185,6 +189,7 @@ export class PrivateMempool extends SequencerModule implements Mempool {
               .filter((id, idx, arr) => arr.indexOf(id) === idx),
           };
         }
+        stateServiceProvider.popCurrentStateService();
       }
 
       executionContext.clear();

@@ -33,9 +33,6 @@ describe("block limit", () => {
   }>;
   let sequencer: Sequencer<DefaultTestingSequencerModules>;
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  let appChain: AppChain<any, any, any, any>;
-
   let blockTrigger: ManualBlockTrigger;
   let mempool: PrivateMempool;
 
@@ -83,6 +80,7 @@ describe("block limit", () => {
         BaseLayer: {},
         TaskQueue: {},
         FeeStrategy: {},
+        ProtocolStartupModule: {},
       },
       Runtime: {
         Balance: {},
@@ -101,39 +99,8 @@ describe("block limit", () => {
     // Start AppChain
     await app.start(container.createChildContainer());
 
-    appChain = app;
-
     ({ runtime, sequencer } = app);
-  }
 
-  it("should produce block that respects the maximum block size", async () => {
-    const MAXIMUM_BLOCK_SIZE = 10;
-    await setUpAppChain(10);
-    blockTrigger = sequencer.resolve("BlockTrigger");
-    mempool = sequencer.resolve("Mempool");
-
-    const privateKey = PrivateKey.random();
-
-    for (let i = 0; i < 30; i++) {
-      const tx = createTransaction({
-        runtime,
-        method: ["Balance", "setBalanceIf"],
-        privateKey: privateKey,
-        args: [privateKey.toPublicKey(), UInt64.from(100), Bool(true)],
-        nonce: i,
-      });
-      await mempool.add(tx);
-    }
-
-    const block = await blockTrigger.produceBlock();
-
-    expect(block).toBeDefined();
-    expect(block!.transactions).toHaveLength(MAXIMUM_BLOCK_SIZE);
-  }, 30000);
-
-  it("should produce block that respects the default block size", async () => {
-    await setUpAppChain(undefined);
-    blockTrigger = sequencer.resolve("BlockTrigger");
     mempool = sequencer.resolve("Mempool");
 
     const privateKey = PrivateKey.random();
@@ -148,10 +115,27 @@ describe("block limit", () => {
       });
       await mempool.add(tx);
     }
+  }
 
-    const block = await blockTrigger.produceBlock();
+  it.each([
+    [5, 5],
+    [10, 10],
+    [15, 15],
+    [25, 25],
+    [35, 35],
+    [undefined, 20],
+  ])(
+    "when limit is set to %p should produce block with maximum size %p",
+    async (limit, maxValue) => {
+      await setUpAppChain(limit);
 
-    expect(block).toBeDefined();
-    expect(block!.transactions).toHaveLength(20);
-  }, 30000);
+      blockTrigger = sequencer.resolve("BlockTrigger");
+
+      const block = await blockTrigger.produceBlock();
+
+      expect(block).toBeDefined();
+      expect(block!.transactions).toHaveLength(maxValue);
+    },
+    30000
+  );
 });
