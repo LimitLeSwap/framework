@@ -4,8 +4,12 @@ import { range } from "../utils";
 import { TypedClass } from "../types";
 
 import { LinkedMerkleTreeStore } from "./LinkedMerkleTreeStore";
-import { InMemoryMerkleTreeStorage } from "./InMemoryMerkleTreeStorage";
-import { AbstractMerkleWitness, StructTemplate } from "./RollupMerkleTree";
+import { InMemoryLinkedMerkleTreeStorage } from "./InMemoryLinkedMerkleTreeStorage";
+import {
+  AbstractMerkleWitness,
+  StructTemplate,
+  maybeSwap,
+} from "./RollupMerkleTree";
 
 class LinkedLeaf extends Struct({
   value: Field,
@@ -16,9 +20,6 @@ class LinkedLeaf extends Struct({
 export interface AbstractLinkedMerkleTree {
   store: LinkedMerkleTreeStore;
   readonly leafCount: bigint;
-
-  assertIndexRange(index: bigint): void;
-
   /**
    * Returns a node which lives at a given index and level.
    * @param level Level of the node.
@@ -38,7 +39,14 @@ export interface AbstractLinkedMerkleTree {
    * @param index Position of the leaf node.
    * @param leaf New value.
    */
-  setLeaf(index: bigint, leaf: Field): void;
+  setLeaf(index: bigint, leaf: LinkedLeaf): void;
+
+  /**
+   * Returns a leaf which lives at a given index.
+   * @param index Index of the node.
+   * @returns The data of the leaf.
+   */
+  getLeaf(index: bigint): LinkedLeaf;
 
   /**
    * Returns the witness (also known as
@@ -48,12 +56,6 @@ export interface AbstractLinkedMerkleTree {
    * @returns The witness that belongs to the leaf.
    */
   getWitness(index: bigint): AbstractMerkleWitness;
-
-  /**
-   * Fills all leaves of the tree.
-   * @param leaves Values to fill the leaves with.
-   */
-  fill(leaves: Field[]): void;
 }
 
 export interface AbstractLinkedMerkleTreeClass {
@@ -97,7 +99,6 @@ export function createLinkedMerkleTree(
       for (let index = 1; index < n; ++index) {
         const isLeft = this.isLeft[index - 1];
 
-        // eslint-disable-next-line @typescript-eslint/no-use-before-define
         const [left, right] = maybeSwap(isLeft, hash, this.path[index - 1]);
         hash = Poseidon.hash([left, right]);
       }
@@ -161,17 +162,19 @@ export function createLinkedMerkleTree(
     }
   }
 
-  return class AbstractRollupMerkleTree implements AbstractLinkedMerkleTree {
+  return class AbstractLinkedRollupMerkleTree
+    implements AbstractLinkedMerkleTree
+  {
     public static HEIGHT = height;
 
-    public static EMPTY_ROOT = new AbstractRollupMerkleTree(
-      new InMemoryMerkleTreeStorage()
+    public static EMPTY_ROOT = new AbstractLinkedRollupMerkleTree(
+      new InMemoryLinkedMerkleTreeStorage()
     )
       .getRoot()
       .toBigInt();
 
     public static get leafCount(): bigint {
-      return 2n ** BigInt(AbstractRollupMerkleTree.HEIGHT - 1);
+      return 2n ** BigInt(AbstractLinkedRollupMerkleTree.HEIGHT - 1);
     }
 
     public static WITNESS = LinkedMerkleWitness;
@@ -184,7 +187,11 @@ export function createLinkedMerkleTree(
     public constructor(store: LinkedMerkleTreeStore) {
       this.store = store;
       this.zeroes = [0n];
-      for (let index = 1; index < AbstractRollupMerkleTree.HEIGHT; index += 1) {
+      for (
+        let index = 1;
+        index < AbstractLinkedRollupMerkleTree.HEIGHT;
+        index += 1
+      ) {
         const previousLevel = Field(this.zeroes[index - 1]);
         this.zeroes.push(
           Poseidon.hash([previousLevel, previousLevel]).toBigInt()
@@ -198,15 +205,37 @@ export function createLinkedMerkleTree(
       }
     }
 
+    public getNode(level: number, index: bigint): Field {
+      this.assertIndexRange(index);
+      const node = this.store.getNode(index, level) ?? {
+        value: 0n,
+        path: 0,
+        nextPath: 0,
+      };
+      return {
+        value: Field(node.value),
+        path: Field(node.path),
+        nextPath: Field(node.nextPath),
+      };
+    }
+
     /**
      * Returns a node which lives at a given index and level.
      * @param level Level of the node.
      * @param index Index of the node.
      * @returns The data of the node.
      */
-    public getNode(level: number, index: bigint): Field {
-      this.assertIndexRange(index);
-      return Field(this.store.getNode(index, level) ?? this.zeroes[level]);
+    public getLeaf(index: bigint): LinkedLeaf {
+      const node = this.store.getNode(index, 0) ?? {
+        value: 0n,
+        path: 0,
+        nextPath: 0,
+      };
+      return {
+        value: Field(node.value),
+        path: Field(node.path),
+        nextPath: Field(node.nextPath),
+      };
     }
 
     /**
@@ -214,12 +243,19 @@ export function createLinkedMerkleTree(
      * @returns The root of the Merkle Tree.
      */
     public getRoot(): Field {
-      return this.getNode(AbstractRollupMerkleTree.HEIGHT - 1, 0n).toConstant();
+      return this.getNode(
+        AbstractLinkedRollupMerkleTree.HEIGHT - 1,
+        0n
+      ).toConstant();
     }
 
     // private in interface
-    private setNode(level: number, index: bigint, value: Field) {
-      this.store.setNode(index, level, value.toBigInt());
+    private setNode(level: number, index: bigint, node: LinkedLeaf) {
+      this.store.setNode(index, level, {
+        value: node.value.toBigInt(),
+        path: node.path.toBigInt(),
+        nextPath: node.nextPath.toBigInt(),
+      });
     }
 
     /**
@@ -227,12 +263,16 @@ export function createLinkedMerkleTree(
      * @param index Position of the leaf node.
      * @param leaf New value.
      */
-    public setLeaf(index: bigint, leaf: Field) {
+    public setLeaf(index: bigint, leaf: LinkedLeaf) {
       this.assertIndexRange(index);
 
       this.setNode(0, index, leaf);
       let currentIndex = index;
-      for (let level = 1; level < AbstractRollupMerkleTree.HEIGHT; level += 1) {
+      for (
+        let level = 1;
+        level < AbstractLinkedRollupMerkleTree.HEIGHT;
+        level += 1
+      ) {
         currentIndex /= 2n;
 
         const left = this.getNode(level - 1, currentIndex * 2n);
@@ -257,7 +297,7 @@ export function createLinkedMerkleTree(
       let currentIndex = index;
       for (
         let level = 0;
-        level < AbstractRollupMerkleTree.HEIGHT - 1;
+        level < AbstractLinkedRollupMerkleTree.HEIGHT - 1;
         level += 1
       ) {
         const isLeft = currentIndex % 2n === 0n;
@@ -275,7 +315,6 @@ export function createLinkedMerkleTree(
       });
     }
 
-    // TODO: should this take an optional offset? should it fail if the array is too long?
     /**
      * Fills all leaves of the tree.
      * @param leaves Values to fill the leaves with.
@@ -291,21 +330,10 @@ export function createLinkedMerkleTree(
      * @returns Amount of leaf nodes.
      */
     public get leafCount(): bigint {
-      return AbstractRollupMerkleTree.leafCount;
+      return AbstractLinkedRollupMerkleTree.leafCount;
     }
   };
 }
 
-export class LinkedMerkleTree extends createLinkedMerkleTree(256) {}
+export class LinkedMerkleTree extends createLinkedMerkleTree(40) {}
 export class LinkedMerkleTreeWitness extends LinkedMerkleTree.WITNESS {}
-
-/**
- * More efficient version of `maybeSwapBad` which
- * reuses an intermediate variable
- */
-function maybeSwap(b: Bool, x: Field, y: Field): [Field, Field] {
-  const m = b.toField().mul(x.sub(y)); // b*(x - y)
-  const x1 = y.add(m); // y + b*(x - y)
-  const y2 = x.sub(m); // x - b*(x - y) = x + b*(y - x)
-  return [x1, y2];
-}
