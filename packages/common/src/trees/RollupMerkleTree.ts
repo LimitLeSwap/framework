@@ -348,7 +348,7 @@ export class RollupMerkleTreeWitness extends RollupMerkleTree.WITNESS {}
  * More efficient version of `maybeSwapBad` which
  * reuses an intermediate variable
  */
-function maybeSwap(b: Bool, x: Field, y: Field): [Field, Field] {
+export function maybeSwap(b: Bool, x: Field, y: Field): [Field, Field] {
   const m = b.toField().mul(x.sub(y)); // b*(x - y)
   const x1 = y.add(m); // y + b*(x - y)
   const y2 = x.sub(m); // x - b*(x - y) = x + b*(y - x)
