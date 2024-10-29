@@ -1,4 +1,4 @@
-import { log, mapSequential, noop } from "@proto-kit/common";
+import { log, noop } from "@proto-kit/common";
 
 import { SequencerModule } from "../../sequencer/builder/SequencerModule";
 import { TaskPayload } from "../flow/Task";
@@ -24,73 +24,56 @@ export class LocalTaskQueue
   extends SequencerModule<LocalTaskQueueConfig>
   implements TaskQueue
 {
-  private queues: {
+  public queues: {
     [key: string]: { payload: TaskPayload; taskId: string }[];
   } = {};
 
   private workers: {
-    [key: string]: {
-      busy: boolean;
-      handler: (data: TaskPayload) => Promise<TaskPayload | "closed">;
-      close: () => Promise<void>;
-    };
+    [key: string]:
+      | {
+          busy: boolean;
+          handler: (data: TaskPayload) => Promise<TaskPayload | "closed">;
+          close: () => Promise<void>;
+        }
+      | undefined;
   } = {};
 
-  private readonly listeners: {
-    [key: string]: QueueListener[];
+  public readonly listeners: {
+    [key: string]: QueueListener[] | undefined;
   } = {};
 
-  private taskInProgress = false;
-
-  private async workNextTasks() {
-    if (this.taskInProgress) {
-      return;
-    }
-    this.taskInProgress = true;
-
-    // Collect all tasks
-    const tasksToExecute = Object.entries(this.queues).flatMap((queue) => {
-      const [queueName, tasks] = queue;
-
-      if (tasks.length > 0) {
-        const functions = tasks.map((task) => async () => {
+  public workNextTasks() {
+    Object.entries(this.queues).forEach(([queueName, tasks]) => {
+      if (tasks.length > 0 && this.workers[queueName]) {
+        tasks.forEach((task) => {
           // Execute task in worker
 
-          const payload = await this.workers[queueName].handler(task.payload);
-
-          if (payload === "closed") {
-            return;
-          }
-          log.trace("LocalTaskQueue got", JSON.stringify(payload));
-          // Notify listeners about result
-          const listenerPromises = this.listeners[queueName].map(
-            async (listener) => {
-              await listener(payload);
-            }
-          );
-          await Promise.all(listenerPromises);
+          void this.workers[queueName]
+            ?.handler(task.payload)
+            .then((payload) => {
+              if (payload === "closed") {
+                return;
+              }
+              log.trace("LocalTaskQueue got", JSON.stringify(payload));
+              // Notify listeners about result
+              const listenerPromises = this.listeners[queueName]?.map(
+                async (listener) => {
+                  await listener(payload);
+                }
+              );
+              void Promise.all(listenerPromises || []);
+            });
         });
-
-        this.queues[queue[0]] = [];
-        return functions;
       }
-      return [];
+
+      this.queues[queueName] = [];
     });
-
-    // Execute all tasks
-    await mapSequential(tasksToExecute, async (task) => await task());
-
-    this.taskInProgress = false;
-
-    // In case new tasks came up in the meantime, execute them as well
-    if (tasksToExecute.length > 0) {
-      await this.workNextTasks();
-    }
   }
 
   public createWorker(
     queueName: string,
-    executor: (data: TaskPayload) => Promise<TaskPayload>
+    executor: (data: TaskPayload) => Promise<TaskPayload>,
+    options?: { concurrency?: number; singleUse?: boolean }
   ): Closeable {
     const close = async () => {
       this.workers[queueName] = {
@@ -109,14 +92,20 @@ export class LocalTaskQueue
       handler: async (data: TaskPayload) => {
         await sleep(this.config.simulatedDuration ?? 0);
 
-        return await executor(data);
+        const result = await executor(data);
+
+        if (options?.singleUse ?? false) {
+          await close();
+        }
+
+        return result;
       },
 
       close,
     };
 
     this.workers[queueName] = worker;
-    void this.workNextTasks();
+    this.workNextTasks();
 
     return worker;
   }

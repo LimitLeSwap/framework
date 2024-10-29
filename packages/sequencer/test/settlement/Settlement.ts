@@ -4,6 +4,7 @@ import {
   log,
   RollupMerkleTree,
   TypedClass,
+  mapSequential,
 } from "@proto-kit/common";
 import { VanillaProtocolModules } from "@proto-kit/library";
 import { Runtime } from "@proto-kit/module";
@@ -236,8 +237,8 @@ export const settlementTestFn = (
 
         await mempool.add(tx);
       }
-      txs.forEach((tx) => {
-        mempool.add(tx);
+      await mapSequential(txs, async (tx) => {
+        await mempool.add(tx);
       });
 
       const result = await trigger.produceBlockAndBatch();
