@@ -36,7 +36,7 @@ function timeLog(label = "time"): string {
   if (prev === undefined) {
     return "Label not found";
   }
-  return Date.now() - prev + "ms";
+  return `${label} took ${Date.now() - prev}ms`;
 }
 
 function timeEnd(label = "time"): string {
