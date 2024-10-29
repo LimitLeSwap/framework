@@ -1,17 +1,19 @@
 import { inject, injectable, Lifecycle, scoped } from "tsyringe";
 import { Runtime } from "@proto-kit/module";
-import { Field, VerificationKey } from "o1js";
-import { log, mapSequential, MOCK_VERIFICATION_KEY } from "@proto-kit/common";
+import { VerificationKey } from "o1js";
+import { log, mapSequential } from "@proto-kit/common";
+import {
+  MandatorySettlementModulesRecord,
+  NetworkState,
+  Protocol,
+  RuntimeMethodExecutionContext,
+  RuntimeTransaction,
+  SettlementContractModule,
+} from "@proto-kit/protocol";
 
 import { TaskSerializer } from "../../../worker/flow/Task";
 import { VKRecord } from "../../runtime/RuntimeVerificationKeyService";
 import { UnpreparingTask } from "../../../worker/flow/UnpreparingTask";
-import {
-  MandatorySettlementModulesRecord,
-  Protocol,
-  ProtocolModulesRecord,
-  SettlementContractModule,
-} from "@proto-kit/protocol";
 import { VerificationKeySerializer } from "../helpers/VerificationKeySerializer";
 
 export type CompiledCircuitsRecord = {
@@ -100,8 +102,17 @@ export class CircuitCompilerTask extends UnpreparingTask<
   }
 
   public async compileRuntimeMethods() {
-    log.info("Compiling runtime circuits");
-    return await mapSequential(
+    log.time("Compiling runtime circuits");
+
+    const context = this.runtime.dependencyContainer.resolve(
+      RuntimeMethodExecutionContext
+    );
+    context.setup({
+      transaction: RuntimeTransaction.dummyTransaction(),
+      networkState: NetworkState.empty(),
+    });
+
+    const result = await mapSequential(
       this.runtime.zkProgrammable.zkProgram,
       async (program) => {
         const vk = (await program.compile()).verificationKey;
@@ -120,22 +131,28 @@ export class CircuitCompilerTask extends UnpreparingTask<
         return vkRecordStep;
       }
     );
+    log.timeEnd.info("Compiling runtime circuits");
+    return result;
   }
 
   public async compileProtocolCircuits(): Promise<
     [string, VerificationKey][][]
   > {
-    log.info("Compiling protocol circuits");
     // We only care about the BridgeContract for now - later with cachine,
     // we might want to expand that to all protocol circuits
     const container = this.protocol.dependencyContainer;
     if (container.isRegistered("SettlementContractModule")) {
+      log.time("Compiling protocol circuits");
+
       const settlementModule = container.resolve<
         SettlementContractModule<MandatorySettlementModulesRecord>
       >("SettlementContractModule");
 
       const BridgeClass = settlementModule.getContractClasses().bridge;
       const artifact = await BridgeClass.compile();
+
+      log.timeEnd.info("Compiling protocol circuits");
+
       return [[["BridgeContract", artifact.verificationKey]]];
     }
     return [[]];

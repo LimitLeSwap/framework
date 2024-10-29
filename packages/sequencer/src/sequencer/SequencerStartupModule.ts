@@ -69,8 +69,6 @@ export class SequencerStartupModule extends SequencerModule {
       bridgeContractVerificationKey: bridgeVk?.vk,
     });
 
-    await sleep(500);
-
     log.info("Protocol circuits compiled successfully, commencing startup");
   }
 }

@@ -9,7 +9,7 @@ import {
   Protocol,
   StateTransitionProof,
 } from "@proto-kit/protocol";
-import { log, MOCK_PROOF } from "@proto-kit/common";
+import { log } from "@proto-kit/common";
 
 import { TaskQueue } from "../../worker/queue/TaskQueue";
 import { Flow, FlowCreator } from "../../worker/flow/Flow";
@@ -253,6 +253,8 @@ export class BlockTaskFlowService {
                 }
               );
 
+              // TODO Dummy ST Proof for transactions that don't emit STs
+
               const stReductionFlow = this.createSTMergeFlow(
                 `tx-stproof-${batchId}-${blockNumber}-${transactionIndex}`,
                 trace.stateTransitionProver.length
@@ -298,12 +300,12 @@ export class BlockTaskFlowService {
 
           // Provide a dummy prove is this block is empty
           const proof =
-            new this.protocol.blockProver.zkProgrammable.zkProgram[0].Proof({
+            await this.protocol.blockProver.zkProgrammable.zkProgram[0].Proof.dummy(
               publicInput,
               publicOutput,
-              proof: MOCK_PROOF,
-              maxProofsVerified: 2,
-            });
+              2
+            );
+
           flow.state.blockPairings[blockNumber].blockProof = proof;
           await this.pushBlockPairing(flow, blockMergingFlow, blockNumber);
         }
@@ -314,14 +316,12 @@ export class BlockTaskFlowService {
           const [{ publicInput }] = blockTrace.stateTransitionProver;
 
           flow.state.blockPairings[blockNumber].stProof =
-            new this.protocol.stateTransitionProver.zkProgrammable.zkProgram[0].Proof(
-              {
-                publicInput,
-                proof: MOCK_PROOF,
-                publicOutput: publicInput,
-                maxProofsVerified: 2,
-              }
+            await this.protocol.stateTransitionProver.zkProgrammable.zkProgram[0].Proof.dummy(
+              publicInput,
+              publicInput,
+              2
             );
+
           await this.pushBlockPairing(flow, blockMergingFlow, blockNumber);
         } else {
           const blockSTFlow = this.createSTMergeFlow(

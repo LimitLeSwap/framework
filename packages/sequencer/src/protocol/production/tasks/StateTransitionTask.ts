@@ -19,12 +19,12 @@ import {
 } from "../../../helpers/utils";
 import { TaskWorkerModule } from "../../../worker/worker/TaskWorkerModule";
 import { PreFilledWitnessProvider } from "../../../state/prefilled/PreFilledWitnessProvider";
+import { CompileRegistry } from "../helpers/CompileRegistry";
 
 import {
   StateTransitionParametersSerializer,
   StateTransitionProofParameters,
 } from "./StateTransitionTaskParameters";
-import { CompileRegistry } from "./CompileRegistry";
 
 @injectable()
 @scoped(Lifecycle.ContainerScoped)
@@ -68,13 +68,6 @@ export class StateTransitionTask
     witnessProviderReference.setWitnessProvider(witnessProvider);
 
     const stBatch = input.stateTransitions.slice();
-    // Array.from({
-    //   length: ProtocolConstants.stateTransitionProverBatchSize - stBatch.length,
-    // }).forEach(() => {
-    //   stBatch.push({
-    //     ProvableStateTransition.dummy()
-    //   });
-    // });
 
     const output = await this.stateTransitionProver.runBatch(
       input.publicInput,
