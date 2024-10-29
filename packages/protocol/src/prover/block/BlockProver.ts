@@ -149,8 +149,8 @@ export class BlockProverProgrammable extends ZkProgrammable<
     super();
   }
 
-  public get appChain(): AreProofsEnabled | undefined {
-    return this.prover.appChain;
+  public get areProofsEnabled(): AreProofsEnabled | undefined {
+    return this.prover.areProofsEnabled;
   }
 
   /**
@@ -475,7 +475,7 @@ export class BlockProverProgrammable extends ZkProgrammable<
     publicInput: BlockProverPublicInput,
     networkState: NetworkState,
     blockWitness: BlockHashMerkleTreeWitness,
-    stateTransitionProof: StateTransitionProof,
+    // stateTransitionProof: StateTransitionProof,
     transactionProof: BlockProverProof
   ): Promise<BlockProverPublicOutput> {
     const state: BlockProverState = {
@@ -517,24 +517,28 @@ export class BlockProverProgrammable extends ZkProgrammable<
       "TransactionProof starting incomingMessagesHash not matching"
     );
 
+    // TODO Reintroduce ST Proofs
     // Verify ST Proof only if STs have been emitted,
     // otherwise we can input a dummy proof
-    const stsEmitted = stateTransitionProof.publicOutput.stateTransitionsHash
-      .equals(0)
-      .and(stateTransitionProof.publicOutput.protocolTransitionsHash.equals(0))
-      .not();
-    stateTransitionProof.verifyIf(stsEmitted);
+    // const stsEmitted = stateTransitionProof.publicOutput.stateTransitionsHash
+    //   .equals(0)
+    //   .and(stateTransitionProof.publicOutput.protocolTransitionsHash.equals(0))
+    //   .not();
+    // Provable.log("VerifyIf 1", stsEmitted);
+    // stateTransitionProof.verifyIf(Bool(false));
+    // stateTransitionProof.verifyIf(stsEmitted);
 
     // Verify Transaction proof if it has at least 1 tx
     // We have to compare the whole input and output because we can make no
     // assumptions about the values, since it can be an arbitrary dummy-proof
     const txProofOutput = transactionProof.publicOutput;
-    const verifyTransactionProof = txProofOutput.equals(
+    const isEmptyTransition = txProofOutput.equals(
       transactionProof.publicInput,
       txProofOutput.closed,
       txProofOutput.blockNumber
     );
-    transactionProof.verifyIf(verifyTransactionProof);
+    Provable.log("VerifyIf 2", isEmptyTransition.not());
+    transactionProof.verifyIf(isEmptyTransition.not());
 
     // 2. Execute beforeBlock hooks
     const beforeBlockResult = await this.executeBlockHooks(
@@ -543,12 +547,12 @@ export class BlockProverProgrammable extends ZkProgrammable<
       "beforeBlock"
     );
 
-    const beforeBlockHashList = new StateTransitionReductionList(
-      ProvableStateTransition
-    );
-    beforeBlockResult.stateTransitions.forEach((st) => {
-      beforeBlockHashList.push(st.toProvable());
-    });
+    // const beforeBlockHashList = new StateTransitionReductionList(
+    //   ProvableStateTransition
+    // );
+    // beforeBlockResult.stateTransitions.forEach((st) => {
+    //   beforeBlockHashList.push(st.toProvable());
+    // });
 
     // We are reusing protocolSTs here as beforeBlock STs
     // TODO Not possible atm bcs we can't have a seperation between protocol/runtime state roots,
@@ -560,10 +564,10 @@ export class BlockProverProgrammable extends ZkProgrammable<
     // state.stateRoot = stateTransitionProof.publicInput.protocolStateRoot;
 
     // TODO Only for now
-    beforeBlockHashList.commitment.assertEquals(
-      Field(0),
-      "beforeBlock() cannot emit state transitions yet"
-    );
+    // beforeBlockHashList.commitment.assertEquals(
+    //   Field(0),
+    //   "beforeBlock() cannot emit state transitions yet"
+    // );
 
     // 4. Apply TX-type BlockProof
     transactionProof.publicInput.networkStateHash.assertEquals(
@@ -583,7 +587,7 @@ export class BlockProverProgrammable extends ZkProgrammable<
       transactionProof.publicOutput.incomingMessagesHash;
 
     // 5. Execute afterBlock hooks
-    this.assertSTProofInput(stateTransitionProof, state.stateRoot);
+    // this.assertSTProofInput(stateTransitionProof, state.stateRoot);
 
     const afterBlockResult = await this.executeBlockHooks(
       state,
@@ -601,15 +605,15 @@ export class BlockProverProgrammable extends ZkProgrammable<
     state.networkStateHash = afterBlockResult.networkState.hash();
 
     // We are reusing runtime STs here as afterBlock STs
-    stateTransitionProof.publicInput.stateTransitionsHash.assertEquals(
-      afterBlockHashList.commitment,
-      "STProof from-ST-hash not matching generated ST-hash from afterBlock hooks"
-    );
-    state.stateRoot = Provable.if(
-      stsEmitted,
-      stateTransitionProof.publicOutput.stateRoot,
-      state.stateRoot
-    );
+    // stateTransitionProof.publicInput.protocolTransitionsHash.assertEquals(
+    //   afterBlockHashList.commitment,
+    //   "STProof from-ST-hash not matching generated ST-hash from afterBlock hooks"
+    // );
+    // state.stateRoot = Provable.if(
+    //   stsEmitted,
+    //   stateTransitionProof.publicOutput.stateRoot,
+    //   state.stateRoot
+    // );
 
     // 6. Close block
 
@@ -782,7 +786,6 @@ export class BlockProverProgrammable extends ZkProgrammable<
   >[] {
     const { prover, stateTransitionProver } = this;
     const StateTransitionProofClass = stateTransitionProver.zkProgram[0].Proof;
-    const RuntimeProofClass = DynamicRuntimeProof;
     const proveTransaction = prover.proveTransaction.bind(prover);
     const proveBlock = prover.proveBlock.bind(prover);
     const merge = prover.merge.bind(prover);
@@ -796,7 +799,7 @@ export class BlockProverProgrammable extends ZkProgrammable<
         proveTransaction: {
           privateInputs: [
             StateTransitionProofClass,
-            RuntimeProofClass,
+            DynamicRuntimeProof,
             BlockProverExecutionData,
             RuntimeVerificationKeyAttestation,
           ],
@@ -822,21 +825,21 @@ export class BlockProverProgrammable extends ZkProgrammable<
           privateInputs: [
             NetworkState,
             BlockHashMerkleTreeWitness,
-            StateTransitionProofClass,
+            // StateTransitionProofClass,
             SelfProof<BlockProverPublicInput, BlockProverPublicOutput>,
           ],
           async method(
             publicInput: BlockProverPublicInput,
             networkState: NetworkState,
             blockWitness: BlockHashMerkleTreeWitness,
-            stateTransitionProof: StateTransitionProof,
+            // stateTransitionProof: StateTransitionProof,
             transactionProof: BlockProverProof
           ) {
             return await proveBlock(
               publicInput,
               networkState,
               blockWitness,
-              stateTransitionProof,
+              // stateTransitionProof,
               transactionProof
             );
           },
@@ -861,6 +864,7 @@ export class BlockProverProgrammable extends ZkProgrammable<
 
     const methods = {
       proveTransaction: program.proveTransaction,
+      proveBlock: program.proveBlock,
       merge: program.merge,
     };
 
@@ -932,14 +936,14 @@ export class BlockProver extends ProtocolModule implements BlockProvable {
     publicInput: BlockProverPublicInput,
     networkState: NetworkState,
     blockWitness: BlockHashMerkleTreeWitness,
-    stateTransitionProof: StateTransitionProof,
+    // stateTransitionProof: StateTransitionProof,
     transactionProof: BlockProverProof
   ): Promise<BlockProverPublicOutput> {
     return this.zkProgrammable.proveBlock(
       publicInput,
       networkState,
       blockWitness,
-      stateTransitionProof,
+      // stateTransitionProof,
       transactionProof
     );
   }

@@ -70,8 +70,8 @@ export class StateTransitionProverProgrammable extends ZkProgrammable<
     super();
   }
 
-  public get appChain(): AreProofsEnabled | undefined {
-    return this.stateTransitionProver.appChain;
+  public get areProofsEnabled(): AreProofsEnabled | undefined {
+    return this.stateTransitionProver.areProofsEnabled;
   }
 
   public zkProgramFactory(): PlainZkProgram<
