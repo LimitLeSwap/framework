@@ -27,7 +27,7 @@ export class InMemoryLinkedMerkleTreeStorage implements LinkedMerkleTreeStore {
     this.leaves[key.toString()] = value;
   }
 
-  public getIndex(path: number): string | undefined {
+  public getLeafIndex(path: number): string | undefined {
     return Object.keys(this.leaves).find((key) => {
       return this.leaves[key].path === path;
     });

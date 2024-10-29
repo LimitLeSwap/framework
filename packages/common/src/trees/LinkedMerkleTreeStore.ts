@@ -7,7 +7,7 @@ export interface LinkedMerkleTreeStore {
 
   getLeaf: (key: number) => LinkedLeaf | undefined;
 
-  getIndex: (path: number) => string | undefined;
+  getLeafIndex: (path: number) => string | undefined;
 }
 
 export type LinkedLeaf = { value: bigint; path: number; nextPath: number };
