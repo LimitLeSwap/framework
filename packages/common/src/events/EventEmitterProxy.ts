@@ -6,7 +6,11 @@ import type {
 import { StringKeyOf, UnionToIntersection } from "../types";
 
 import { EventEmitter } from "./EventEmitter";
-import { EventEmittingComponent, EventsRecord } from "./EventEmittingComponent";
+import {
+  EventEmittingComponent,
+  EventEmittingContainer,
+  EventsRecord,
+} from "./EventEmittingComponent";
 
 export type CastToEventsRecord<Record> = Record extends EventsRecord
   ? Record
@@ -16,7 +20,12 @@ export type ModuleEvents<ModuleType extends BaseModuleType> =
   InstanceType<ModuleType> extends EventEmittingComponent<infer Events>
     ? Events
     : InstanceType<ModuleType> extends ModuleContainer<infer NestedModules>
-      ? CastToEventsRecord<ContainerEvents<NestedModules>>
+      ? CastToEventsRecord<ContainerEvents<NestedModules>> &
+          (InstanceType<ModuleType> extends EventEmittingContainer<
+            infer ContainerEvents
+          >
+            ? ContainerEvents
+            : {})
       : EventsRecord;
 
 export type ContainerEvents<Modules extends ModulesRecord> = {
@@ -27,7 +36,7 @@ export type FlattenObject<Target extends Record<string, EventsRecord>> =
   UnionToIntersection<Target[keyof Target]>;
 
 export type FlattenedContainerEvents<Modules extends ModulesRecord> =
-  FlattenObject<ContainerEvents<Modules>>;
+  FlattenObject<ContainerEvents<Modules>> & FlattenObject<any>;
 
 export class EventEmitterProxy<
   Modules extends ModulesRecord,
@@ -45,8 +54,22 @@ export class EventEmitterProxy<
             this.emit(events, ...args);
           });
         }
+        if (this.isEventEmittingContainer(module)) {
+          module.containerEvents.onAll((events: any, args: any[]) => {
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+            this.emit(events, ...args);
+          });
+        }
       }
     });
+  }
+
+  private isEventEmittingContainer(
+    module: any
+  ): module is EventEmittingContainer<EventsRecord> {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    const emitter = module.containerEvents;
+    return emitter !== undefined && emitter instanceof EventEmitter;
   }
 
   private isEventEmitter(
