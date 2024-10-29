@@ -11,25 +11,29 @@ export class InMemoryLinkedMerkleTreeStorage implements LinkedMerkleTreeStore {
     [key: string]: LinkedLeaf;
   } = {};
 
-  public getNode(key: number, level: number): bigint | undefined {
-    return this.nodes[level]?.[key];
+  public getNode(index: bigint, level: number): bigint | undefined {
+    return this.nodes[level]?.[index.toString()];
   }
 
-  public setNode(key: number, level: number, value: bigint): void {
-    (this.nodes[level] ??= {})[key.toString()] = value;
+  public setNode(index: bigint, level: number, value: bigint): void {
+    (this.nodes[level] ??= {})[index.toString()] = value;
   }
 
-  public getLeaf(key: number): LinkedLeaf | undefined {
-    return this.leaves[key];
+  public getLeaf(index: bigint): LinkedLeaf | undefined {
+    return this.leaves[index.toString()];
   }
 
-  public setLeaf(key: number, value: LinkedLeaf): void {
-    this.leaves[key.toString()] = value;
+  public setLeaf(index: bigint, value: LinkedLeaf): void {
+    this.leaves[index.toString()] = value;
   }
 
-  public getLeafIndex(path: number): string | undefined {
-    return Object.keys(this.leaves).find((key) => {
+  public getLeafIndex(path: number): bigint | undefined {
+    const leafIndex = Object.keys(this.leaves).find((key) => {
       return this.leaves[key].path === path;
     });
+    if (leafIndex === undefined) {
+      return undefined;
+    }
+    return BigInt(leafIndex);
   }
 }

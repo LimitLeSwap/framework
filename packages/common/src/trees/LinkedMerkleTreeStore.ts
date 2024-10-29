@@ -1,13 +1,13 @@
 export interface LinkedMerkleTreeStore {
-  setNode: (key: number, level: number, value: bigint) => void;
+  setNode: (index: bigint, level: number, value: bigint) => void;
 
-  getNode: (key: number, level: number) => bigint | undefined;
+  getNode: (index: bigint, level: number) => bigint | undefined;
 
-  setLeaf: (key: number, value: LinkedLeaf) => void;
+  setLeaf: (index: bigint, value: LinkedLeaf) => void;
 
-  getLeaf: (key: number) => LinkedLeaf | undefined;
+  getLeaf: (index: bigint) => LinkedLeaf | undefined;
 
-  getLeafIndex: (path: number) => string | undefined;
+  getLeafIndex: (path: number) => bigint | undefined;
 }
 
 export type LinkedLeaf = { value: bigint; path: number; nextPath: number };

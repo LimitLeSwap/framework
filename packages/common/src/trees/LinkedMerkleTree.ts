@@ -1,6 +1,5 @@
 import { Bool, Field, Poseidon, Provable, Struct } from "o1js";
 
-import { range } from "../utils";
 import { TypedClass } from "../types";
 
 import { LinkedMerkleTreeStore } from "./LinkedMerkleTreeStore";
@@ -42,11 +41,11 @@ export interface AbstractLinkedMerkleTree {
   setLeaf(index: bigint, leaf: LinkedLeaf): void;
 
   /**
-   * Returns a leaf which lives at a given index.
-   * @param index Index of the node.
+   * Returns a leaf which lives at a given path.
+   * @param path Index of the node.
    * @returns The data of the leaf.
    */
-  getLeaf(index: bigint): LinkedLeaf;
+  getLeaf(path: number): LinkedLeaf | undefined;
 
   /**
    * Returns the witness (also known as
@@ -92,8 +91,8 @@ export function createLinkedMerkleTree(
      * @param leaf Value of the leaf node that belongs to this Witness.
      * @returns The calculated root.
      */
-    public calculateRoot(leaf: LinkedLeaf): Field {
-      let hash = Poseidon.hash([leaf.value, leaf.path, leaf.nextPath]);
+    public calculateRoot(leaf: Field): Field {
+      let hash = leaf;
       const n = this.height();
 
       for (let index = 1; index < n; ++index) {
@@ -142,24 +141,6 @@ export function createLinkedMerkleTree(
       key.assertEquals(calculatedKey, "Keys of MerkleWitness does not match");
       return [root.equals(calculatedRoot), root, calculatedRoot];
     }
-
-    public toShortenedEntries() {
-      return range(0, 5)
-        .concat(range(this.height() - 4, this.height()))
-        .map((index) =>
-          [
-            this.path[index].toString(),
-            this.isLeft[index].toString(),
-          ].toString()
-        );
-    }
-
-    public static dummy() {
-      return new LinkedMerkleWitness({
-        isLeft: Array<Bool>(height - 1).fill(Bool(false)),
-        path: Array<Field>(height - 1).fill(Field(0)),
-      });
-    }
   }
 
   return class AbstractLinkedRollupMerkleTree
@@ -207,34 +188,27 @@ export function createLinkedMerkleTree(
 
     public getNode(level: number, index: bigint): Field {
       this.assertIndexRange(index);
-      const node = this.store.getNode(index, level) ?? {
-        value: 0n,
-        path: 0,
-        nextPath: 0,
-      };
-      return {
-        value: Field(node.value),
-        path: Field(node.path),
-        nextPath: Field(node.nextPath),
-      };
+      return Field(this.store.getNode(index, level) ?? this.zeroes[level]);
     }
 
     /**
-     * Returns a node which lives at a given index and level.
-     * @param level Level of the node.
-     * @param index Index of the node.
+     * Returns leaf which lives at a given path
+     * @param path path of the node.
      * @returns The data of the node.
      */
-    public getLeaf(index: bigint): LinkedLeaf {
-      const node = this.store.getNode(index, 0) ?? {
-        value: 0n,
-        path: 0,
-        nextPath: 0,
-      };
+    public getLeaf(path: number): LinkedLeaf | undefined {
+      const index = this.store.getLeafIndex(path);
+      if (index === undefined) {
+        return index;
+      }
+      const leaf = this.store.getLeaf(BigInt(index));
+      if (leaf === undefined) {
+        return undefined;
+      }
       return {
-        value: Field(node.value),
-        path: Field(node.path),
-        nextPath: Field(node.nextPath),
+        value: Field(leaf.value),
+        path: Field(leaf.path),
+        nextPath: Field(leaf.nextPath),
       };
     }
 
@@ -250,12 +224,8 @@ export function createLinkedMerkleTree(
     }
 
     // private in interface
-    private setNode(level: number, index: bigint, node: LinkedLeaf) {
-      this.store.setNode(index, level, {
-        value: node.value.toBigInt(),
-        path: node.path.toBigInt(),
-        nextPath: node.nextPath.toBigInt(),
-      });
+    private setNode(level: number, index: bigint, value: Field) {
+      this.store.setNode(index, level, value.toBigInt());
     }
 
     /**
@@ -312,16 +282,6 @@ export function createLinkedMerkleTree(
       return new LinkedMerkleWitness({
         isLeft: isLefts,
         path,
-      });
-    }
-
-    /**
-     * Fills all leaves of the tree.
-     * @param leaves Values to fill the leaves with.
-     */
-    public fill(leaves: Field[]) {
-      leaves.forEach((value, index) => {
-        this.setLeaf(BigInt(index), value);
       });
     }
 
