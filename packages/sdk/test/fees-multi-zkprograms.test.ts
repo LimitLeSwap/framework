@@ -10,7 +10,7 @@ import { TestingAppChain } from "../src";
 
 // This test is designed to check what happens when we have multiple zkPrograms.
 // Currently, the hardcoded maximum for methods per zkProgram is 8 (see Runtime.ts).
-// We will create 20 runtime methods to ensure 2 zkPrograms are created.
+// We will create 20 runtime methods to ensure 3 zkPrograms are created.
 
 @runtimeModule()
 class TestModule1 extends RuntimeModule<unknown> {
