@@ -61,6 +61,7 @@ export * from "./helpers/query/NetworkStateQuery";
 export * from "./helpers/query/NetworkStateTransportModule";
 export * from "./state/prefilled/PreFilledStateService";
 export * from "./state/prefilled/PreFilledWitnessProvider";
+export * from "./state/async/AsyncLinkedMerkleTreeStore";
 export * from "./state/async/AsyncMerkleTreeStore";
 export * from "./state/async/AsyncStateService";
 export * from "./state/merkle/CachedMerkleTreeStore";
