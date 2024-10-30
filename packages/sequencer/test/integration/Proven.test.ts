@@ -13,7 +13,7 @@ import { ProtocolStateTestHook } from "./mocks/ProtocolStateTestHook";
 import { BlockTestService } from "./services/BlockTestService";
 import { ProvenBalance } from "./mocks/ProvenBalance";
 
-const timeout = 500000;
+const timeout = 300000;
 
 describe("Proven", () => {
   let test: BlockTestService;
@@ -100,31 +100,35 @@ describe("Proven", () => {
     timeout
   );
 
-  it("should produce simple block", async () => {
-    expect.assertions(6);
+  it(
+    "should produce simple block",
+    async () => {
+      expect.assertions(6);
 
-    log.setLevel("INFO");
+      log.setLevel("INFO");
 
-    const privateKey = PrivateKey.random();
+      const privateKey = PrivateKey.random();
 
-    await test.addTransaction({
-      method: ["Balance", "addBalance"],
-      privateKey,
-      args: [PrivateKey.random().toPublicKey(), UInt64.from(100)],
-    });
+      await test.addTransaction({
+        method: ["Balance", "addBalance"],
+        privateKey,
+        args: [PrivateKey.random().toPublicKey(), UInt64.from(100)],
+      });
 
-    const [block, batch] = await test.produceBlockAndBatch();
+      const [block, batch] = await test.produceBlockAndBatch();
 
-    expectDefined(block);
+      expectDefined(block);
 
-    expect(block.transactions).toHaveLength(1);
-    expect(block.transactions[0].status.toBoolean()).toBe(true);
+      expect(block.transactions).toHaveLength(1);
+      expect(block.transactions[0].status.toBoolean()).toBe(true);
 
-    expectDefined(batch);
+      expectDefined(batch);
 
-    console.log(batch.proof);
+      console.log(batch.proof);
 
-    expect(batch.proof.proof.length).toBeGreaterThan(50);
-    expect(batch.blockHashes).toHaveLength(1);
-  }, 300_000);
+      expect(batch.proof.proof.length).toBeGreaterThan(50);
+      expect(batch.blockHashes).toHaveLength(1);
+    },
+    timeout
+  );
 });
