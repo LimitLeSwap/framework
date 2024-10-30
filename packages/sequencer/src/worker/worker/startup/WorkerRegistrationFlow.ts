@@ -3,6 +3,7 @@ import { log } from "@proto-kit/common";
 
 import { Closeable } from "../../queue/TaskQueue";
 import { FlowCreator } from "../../flow/Flow";
+
 import {
   WorkerRegistrationTask,
   WorkerStartupPayload,

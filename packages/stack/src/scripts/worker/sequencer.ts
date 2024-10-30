@@ -11,7 +11,6 @@ import {
   MinaBaseLayer,
   TimedBlockTrigger,
   DatabasePruneModule,
-  SequencerStartupModule,
 } from "@proto-kit/sequencer";
 import {
   VanillaGraphqlModules,

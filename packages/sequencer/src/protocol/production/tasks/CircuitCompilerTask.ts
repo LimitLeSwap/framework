@@ -84,12 +84,14 @@ export class CircuitCompilerTask extends UnpreparingTask<
     const vkRecordSerializer = new VKResultSerializer();
     return {
       fromJSON: (json) => {
-        const temp = JSON.parse(json);
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        const temp: {
+          runtimeCircuits: VKRecordLite;
+          protocolCircuits: VKRecordLite;
+        } = JSON.parse(json);
         return {
-          runtimeCircuits: vkRecordSerializer.fromJSON(temp["runtimeCircuits"]),
-          protocolCircuits: vkRecordSerializer.fromJSON(
-            temp["protocolCircuits"]
-          ),
+          runtimeCircuits: vkRecordSerializer.fromJSON(temp.runtimeCircuits),
+          protocolCircuits: vkRecordSerializer.fromJSON(temp.protocolCircuits),
         };
       },
       toJSON: (input) => {
@@ -117,18 +119,18 @@ export class CircuitCompilerTask extends UnpreparingTask<
       async (program) => {
         const vk = (await program.compile()).verificationKey;
 
-        const vkRecordStep = Object.keys(program.methods).map(
-          (combinedMethodName) => {
-            const [moduleName, methodName] = combinedMethodName.split(".");
-            const methodId = this.runtime.methodIdResolver.getMethodId(
-              moduleName,
-              methodName
-            );
-            return [methodId.toString(), vk] as [string, VerificationKey];
-          }
-        );
-
-        return vkRecordStep;
+        return Object.keys(program.methods).map((combinedMethodName) => {
+          const [moduleName, methodName] = combinedMethodName.split(".");
+          const methodId = this.runtime.methodIdResolver.getMethodId(
+            moduleName,
+            methodName
+          );
+          // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+          return [methodId.toString(), new VerificationKey(vk)] as [
+            string,
+            VerificationKey,
+          ];
+        });
       }
     );
     log.timeEnd.info("Compiling runtime circuits");

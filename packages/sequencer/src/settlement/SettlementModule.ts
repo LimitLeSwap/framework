@@ -26,7 +26,6 @@ import {
   log,
   AreProofsEnabled,
   DependencyFactory,
-  MOCK_VERIFICATION_KEY,
 } from "@proto-kit/common";
 import truncate from "lodash/truncate";
 

@@ -5,20 +5,17 @@ import {
   RuntimeVerificationKeyRootService,
   SettlementSmartContractBase,
 } from "@proto-kit/protocol";
-import { log, sleep } from "@proto-kit/common";
+import { log } from "@proto-kit/common";
 
-import { SequencerModule, sequencerModule } from "./builder/SequencerModule";
 import { FlowCreator } from "../worker/flow/Flow";
 import { WorkerRegistrationFlow } from "../worker/worker/startup/WorkerRegistrationFlow";
-
 import {
   CircuitCompilerTask,
   CompiledCircuitsRecord,
 } from "../protocol/production/tasks/CircuitCompilerTask";
-import {
-  VerificationKeyService,
-  VKRecord,
-} from "../protocol/runtime/RuntimeVerificationKeyService";
+import { VerificationKeyService } from "../protocol/runtime/RuntimeVerificationKeyService";
+
+import { SequencerModule, sequencerModule } from "./builder/SequencerModule";
 
 @sequencerModule()
 export class SequencerStartupModule extends SequencerModule {

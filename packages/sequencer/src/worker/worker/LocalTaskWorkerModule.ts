@@ -105,9 +105,14 @@ export class LocalTaskWorkerModule<Tasks extends TaskWorkerModulesRecord>
     const worker = new FlowTaskWorker(this.taskQueue(), [...tasks]);
     await worker.start();
 
-    worker.waitForPrepared().then(() => {
-      this.containerEvents.emit("ready", true);
-    });
+    void worker
+      .waitForPrepared()
+      .then(() => {
+        this.containerEvents.emit("ready", true);
+      })
+      .catch((e) => {
+        log.error("Error occurring waiting for the ready event", e);
+      });
   }
 }
 

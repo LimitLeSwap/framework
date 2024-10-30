@@ -1,12 +1,13 @@
 import { inject, injectable, Lifecycle, scoped } from "tsyringe";
+import { Field, PrivateKey } from "o1js";
+import { Runtime, RuntimeModulesRecord } from "@proto-kit/module";
+import { ArgumentTypes } from "@proto-kit/common";
+
 import {
   AsyncStateService,
   ManualBlockTrigger,
   PrivateMempool,
 } from "../../../src";
-import { Field, PrivateKey } from "o1js";
-import { Runtime, RuntimeModulesRecord } from "@proto-kit/module";
-import { ArgumentTypes } from "@proto-kit/common";
 import { createTransaction } from "../utils";
 
 @injectable()

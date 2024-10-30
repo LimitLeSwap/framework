@@ -19,7 +19,6 @@ import {
   StateRecord,
   StorageDependencyFactory,
   BlockStorage,
-  SequencerStartupModule,
 } from "../../src";
 import {
   DefaultTestingSequencerModules,

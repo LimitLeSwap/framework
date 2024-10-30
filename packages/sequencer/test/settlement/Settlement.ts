@@ -55,7 +55,6 @@ import {
   MinaBaseLayerConfig,
   SignedSettlementPermissions,
   ProvenSettlementPermissions,
-  SequencerStartupModule,
 } from "../../src";
 import { BlockProofSerializer } from "../../src/protocol/production/helpers/BlockProofSerializer";
 import { testingSequencerFromModules } from "../TestingSequencer";
@@ -260,7 +259,7 @@ export const settlementTestFn = (
     beforeAll(async () => {
       appChain = setupAppChain();
 
-      await appChain.start(container.createChildContainer());
+      await appChain.start(false, container.createChildContainer());
 
       settlementModule = appChain.sequencer.resolve(
         "SettlementModule"

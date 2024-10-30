@@ -20,13 +20,14 @@ export type ModuleEvents<ModuleType extends BaseModuleType> =
   InstanceType<ModuleType> extends EventEmittingComponent<infer Events>
     ? Events
     : InstanceType<ModuleType> extends ModuleContainer<infer NestedModules>
-      ? CastToEventsRecord<ContainerEvents<NestedModules>> &
-          (InstanceType<ModuleType> extends EventEmittingContainer<
-            infer ContainerEvents
-          >
-            ? ContainerEvents
-            : {})
-      : EventsRecord;
+      ? CastToEventsRecord<ContainerEvents<NestedModules>>
+      : // &
+        // (InstanceType<ModuleType> extends EventEmittingContainer<
+        //   infer ContainerEvents
+        // >
+        //   ? ContainerEvents
+        //   : {})
+        EventsRecord;
 
 export type ContainerEvents<Modules extends ModulesRecord> = {
   [Key in StringKeyOf<Modules>]: ModuleEvents<Modules[Key]>;
@@ -36,7 +37,7 @@ export type FlattenObject<Target extends Record<string, EventsRecord>> =
   UnionToIntersection<Target[keyof Target]>;
 
 export type FlattenedContainerEvents<Modules extends ModulesRecord> =
-  FlattenObject<ContainerEvents<Modules>> & FlattenObject<any>;
+  FlattenObject<ContainerEvents<Modules>>; // & FlattenObject<any>;
 
 export class EventEmitterProxy<
   Modules extends ModulesRecord,

@@ -9,9 +9,9 @@ import { VerificationKey } from "o1js";
 
 import { Task } from "../../flow/Task";
 import { AbstractStartupTask } from "../../flow/AbstractStartupTask";
+import { VerificationKeySerializer } from "../../../protocol/production/helpers/VerificationKeySerializer";
 
 import { CloseWorkerError } from "./CloseWorkerError";
-import { VerificationKeySerializer } from "../../../protocol/production/helpers/VerificationKeySerializer";
 
 export type WorkerStartupPayload = {
   runtimeVerificationKeyRoot: bigint;
