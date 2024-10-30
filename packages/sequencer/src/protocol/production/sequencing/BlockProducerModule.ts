@@ -26,6 +26,7 @@ import { TransactionExecutionService } from "./TransactionExecutionService";
 
 export interface BlockConfig {
   allowEmptyBlock?: boolean;
+  maximumBlockSize?: number;
 }
 
 @sequencerModule()
@@ -53,6 +54,10 @@ export class BlockProducerModule extends SequencerModule<BlockConfig> {
 
   private allowEmptyBlock() {
     return this.config.allowEmptyBlock ?? true;
+  }
+
+  private maximumBlockSize() {
+    return this.config.maximumBlockSize ?? 20;
   }
 
   private prettyPrintBlockContents(block: Block) {
@@ -108,7 +113,9 @@ export class BlockProducerModule extends SequencerModule<BlockConfig> {
           return undefined;
         }
 
-        log.info(`Produced block (${block.transactions.length} txs)`);
+        log.info(
+          `Produced block #${block.height.toBigInt()} (${block.transactions.length} txs)`
+        );
         this.prettyPrintBlockContents(block);
 
         // Generate metadata for next block
@@ -142,7 +149,7 @@ export class BlockProducerModule extends SequencerModule<BlockConfig> {
     txs: PendingTransaction[];
     metadata: BlockWithResult;
   }> {
-    const txs = await this.mempool.getTxs();
+    const txs = await this.mempool.getTxs(this.maximumBlockSize());
 
     const parentBlock = await this.blockQueue.getLatestBlock();
 
