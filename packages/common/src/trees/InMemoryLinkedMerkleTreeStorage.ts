@@ -23,6 +23,19 @@ export class InMemoryLinkedMerkleTreeStorage implements LinkedMerkleTreeStore {
     return this.leaves[index.toString()];
   }
 
+  // This gets the leaf with the closest path.
+  public getClosestPath(path: number): LinkedLeaf {
+    // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+    let largestLeaf = this.getLeaf(0n) as LinkedLeaf;
+    while (largestLeaf.nextPath < path) {
+      // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+      const nextIndex = this.getLeafIndex(largestLeaf.nextPath) as bigint;
+      // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+      largestLeaf = this.getLeaf(nextIndex) as LinkedLeaf;
+    }
+    return largestLeaf;
+  }
+
   public setLeaf(index: bigint, value: LinkedLeaf): void {
     this.leaves[index.toString()] = value;
   }
