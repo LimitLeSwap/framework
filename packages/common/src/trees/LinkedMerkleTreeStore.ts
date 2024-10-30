@@ -8,6 +8,8 @@ export interface LinkedMerkleTreeStore {
   getLeaf: (index: bigint) => LinkedLeaf | undefined;
 
   getLeafIndex: (path: number) => bigint | undefined;
+
+  getClosestPath: (path: number) => LinkedLeaf;
 }
 
 export type LinkedLeaf = { value: bigint; path: number; nextPath: number };

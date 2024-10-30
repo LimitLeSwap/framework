@@ -1,6 +1,7 @@
 import { Bool, Field, Poseidon, Provable, Struct } from "o1js";
 
 import { TypedClass } from "../types";
+import { range } from "../utils";
 
 import { LinkedMerkleTreeStore } from "./LinkedMerkleTreeStore";
 import { InMemoryLinkedMerkleTreeStorage } from "./InMemoryLinkedMerkleTreeStorage";
@@ -48,13 +49,20 @@ export interface AbstractLinkedMerkleTree {
   getLeaf(path: number): LinkedLeaf | undefined;
 
   /**
+   * Returns a leaf which lives at a given path.
+   * @param path Index of the node.
+   * @returns The data of the leaf.
+   */
+  getClosestPath(path: number): LinkedLeaf;
+
+  /**
    * Returns the witness (also known as
    * [Merkle Proof or Merkle Witness](https://computersciencewiki.org/index.php/Merkle_proof))
-   * for the leaf at the given index.
-   * @param index Position of the leaf node.
+   * for the leaf at the given path.
+   * @param path Position of the leaf node.
    * @returns The witness that belongs to the leaf.
    */
-  getWitness(index: bigint): AbstractMerkleWitness;
+  getWitness(path: number): AbstractMerkleWitness;
 }
 
 export interface AbstractLinkedMerkleTreeClass {
@@ -141,6 +149,17 @@ export function createLinkedMerkleTree(
       key.assertEquals(calculatedKey, "Keys of MerkleWitness does not match");
       return [root.equals(calculatedRoot), root, calculatedRoot];
     }
+
+    public toShortenedEntries() {
+      return range(0, 5)
+        .concat(range(this.height() - 4, this.height()))
+        .map((index) =>
+          [
+            this.path[index].toString(),
+            this.isLeft[index].toString(),
+          ].toString()
+        );
+    }
   }
 
   return class AbstractLinkedRollupMerkleTree
@@ -192,7 +211,7 @@ export function createLinkedMerkleTree(
     }
 
     /**
-     * Returns leaf which lives at a given path
+     * Returns leaf which lives at a given path, or closest path
      * @param path path of the node.
      * @returns The data of the node.
      */
@@ -209,6 +228,16 @@ export function createLinkedMerkleTree(
         value: Field(leaf.value),
         path: Field(leaf.path),
         nextPath: Field(leaf.nextPath),
+      };
+    }
+
+    // This gets the leaf with the closest path.
+    public getClosestPath(path: number): LinkedLeaf {
+      const closestLeaf = this.store.getClosestPath(path);
+      return {
+        value: Field(closestLeaf.value),
+        path: Field(closestLeaf.path),
+        nextPath: Field(closestLeaf.nextPath),
       };
     }
 
@@ -233,9 +262,7 @@ export function createLinkedMerkleTree(
      * @param index Position of the leaf node.
      * @param leaf New value.
      */
-    public setLeaf(index: bigint, leaf: LinkedLeaf) {
-      this.assertIndexRange(index);
-
+    public setLeaf(path: bigint, leaf: LinkedLeaf) {
       this.setNode(0, index, leaf);
       let currentIndex = index;
       for (
@@ -259,10 +286,13 @@ export function createLinkedMerkleTree(
      * @param index Position of the leaf node.
      * @returns The witness that belongs to the leaf.
      */
-    public getWitness(index: bigint): LinkedMerkleWitness {
-      this.assertIndexRange(index);
+    public getWitness(path: number): LinkedMerkleWitness {
+      const index = this.store.getLeafIndex(path);
+      if (index === undefined) {
+        throw new Error("Path does not exist in tree.");
+      }
 
-      const path = [];
+      const pathArray = [];
       const isLefts = [];
       let currentIndex = index;
       for (
@@ -276,12 +306,12 @@ export function createLinkedMerkleTree(
           isLeft ? currentIndex + 1n : currentIndex - 1n
         );
         isLefts.push(Bool(isLeft));
-        path.push(sibling);
+        pathArray.push(sibling);
         currentIndex /= 2n;
       }
       return new LinkedMerkleWitness({
         isLeft: isLefts,
-        path,
+        path: pathArray,
       });
     }
 
