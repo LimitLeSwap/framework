@@ -1,15 +1,35 @@
 import { Bool, Field, Poseidon, Provable, Struct } from "o1js";
 
 import { TypedClass } from "../types";
-import { range } from "../utils";
 
 import { LinkedMerkleTreeStore } from "./LinkedMerkleTreeStore";
 import { InMemoryLinkedMerkleTreeStorage } from "./InMemoryLinkedMerkleTreeStorage";
-import {
-  AbstractMerkleWitness,
-  StructTemplate,
-  maybeSwap,
-} from "./RollupMerkleTree";
+import { StructTemplate, maybeSwap } from "./RollupMerkleTree";
+
+export interface AbstractLinkedMerkleWitness extends StructTemplate {
+  height(): number;
+
+  /**
+   * Calculates a root depending on the leaf value.
+   * @param leaf Value of the leaf node that belongs to this Witness.
+   * @returns The calculated root.
+   */
+  calculateRoot(hash: Field): Field;
+
+  /**
+   * Calculates the index of the leaf node that belongs to this Witness.
+   * @returns Index of the leaf.
+   */
+  calculateIndex(): Field;
+
+  checkMembership(root: Field, key: Field, value: Field): Bool;
+
+  checkMembershipGetRoots(
+    root: Field,
+    key: Field,
+    value: Field
+  ): [Bool, Field, Field];
+}
 
 class LinkedLeaf extends Struct({
   value: Field,
@@ -61,14 +81,13 @@ export interface AbstractLinkedMerkleTree {
    * @param path Position of the leaf node.
    * @returns The witness that belongs to the leaf.
    */
-  getWitness(path: number): AbstractMerkleWitness;
+  getWitness(path: number): AbstractLinkedMerkleWitness;
 }
 
 export interface AbstractLinkedMerkleTreeClass {
   new (store: LinkedMerkleTreeStore): AbstractLinkedMerkleTree;
 
-  WITNESS: TypedClass<AbstractMerkleWitness> &
-    typeof StructTemplate & { dummy: () => AbstractMerkleWitness };
+  WITNESS: TypedClass<AbstractLinkedMerkleWitness> & typeof StructTemplate;
 
   HEIGHT: number;
 
@@ -83,7 +102,7 @@ export function createLinkedMerkleTree(
       path: Provable.Array(Field, height - 1),
       isLeft: Provable.Array(Bool, height - 1),
     })
-    implements AbstractMerkleWitness
+    implements AbstractLinkedMerkleWitness
   {
     public static height = height;
 
@@ -146,24 +165,6 @@ export function createLinkedMerkleTree(
       key.assertEquals(calculatedKey, "Keys of MerkleWitness does not match");
       return [root.equals(calculatedRoot), root, calculatedRoot];
     }
-
-    public toShortenedEntries() {
-      return range(0, 5)
-        .concat(range(this.height() - 4, this.height()))
-        .map((index) =>
-          [
-            this.path[index].toString(),
-            this.isLeft[index].toString(),
-          ].toString()
-        );
-    }
-
-    public static dummy() {
-      return new LinkedMerkleWitness({
-        isLeft: Array<Bool>(height - 1).fill(Bool(false)),
-        path: Array<Field>(height - 1).fill(Field(0)),
-      });
-    }
   }
 
   return class AbstractLinkedRollupMerkleTree
@@ -179,28 +180,25 @@ export function createLinkedMerkleTree(
 
     public static WITNESS = LinkedMerkleWitness;
 
-    // private in interface
-    readonly zeroes: bigint[];
-
     readonly store: LinkedMerkleTreeStore;
 
     public constructor(store: LinkedMerkleTreeStore) {
       this.store = store;
-      this.zeroes = [0n];
-      for (
-        let index = 1;
-        index < AbstractLinkedRollupMerkleTree.HEIGHT;
-        index += 1
-      ) {
-        const previousLevel = Field(this.zeroes[index - 1]);
-        this.zeroes.push(
-          Poseidon.hash([previousLevel, previousLevel]).toBigInt()
-        );
-      }
+      this.store.setLeaf(0n, { value: 0n, path: 0, nextPath: 0 });
+      const baseLeaf = this.getLeaf(0);
+      this.setNode(
+        0,
+        0n,
+        Poseidon.hash([baseLeaf.value, baseLeaf.path, baseLeaf.nextPath])
+      );
     }
 
     public getNode(level: number, index: bigint): Field {
-      return Field(this.store.getNode(index, level) ?? this.zeroes[level]);
+      const node = this.store.getNode(index, level);
+      if (node === undefined) {
+        throw new Error("Path does not exist in tree.");
+      }
+      return Field(node);
     }
 
     /**
