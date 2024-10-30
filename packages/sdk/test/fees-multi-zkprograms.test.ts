@@ -162,22 +162,22 @@ describe("check fee analyzer", () => {
           perWeightUnitFee: 0n,
           methods: {
             "TestModule1.Method_1": {
-              baseFee: 10n,
+              baseFee: 9n,
               weight: 0n,
               perWeightUnitFee: 0n,
             },
             "TestModule1.Method_10": {
-              baseFee: 10n,
+              baseFee: 8n,
               weight: 0n,
               perWeightUnitFee: 0n,
             },
             "TestModule2.Method_4": {
-              baseFee: 10n,
+              baseFee: 7n,
               weight: 0n,
               perWeightUnitFee: 0n,
             },
             "TestModule2.Method_7": {
-              baseFee: 10n,
+              baseFee: 6n,
               weight: 0n,
               perWeightUnitFee: 0n,
             },
@@ -191,62 +191,92 @@ describe("check fee analyzer", () => {
   });
 
   it("with multiple zk programs", async () => {
-    expect.assertions(4);
+    expect.assertions(12);
     const testModule1 = appChain.runtime.resolve("TestModule1");
     const testModule2 = appChain.runtime.resolve("TestModule2");
     const faucet = appChain.runtime.resolve("Faucet");
+    const transactionFeeModule = appChain.protocol.resolve("TransactionFee");
 
     const tx1 = await appChain.transaction(
       senderKey.toPublicKey(),
       async () => {
         await faucet.drip();
-      }
+      },
+      { nonce: 0 }
     );
 
     await tx1.sign();
     await tx1.send();
 
-    await appChain.produceBlock();
-
     const tx2 = await appChain.transaction(
       senderKey.toPublicKey(),
       async () => {
         await testModule1.Method_1();
-      }
+      },
+      { nonce: 4 }
     );
 
     await tx2.sign();
     await tx2.send();
+    const methodId2 = tx2.transaction?.methodId.toBigInt();
+    expectDefined(methodId2);
+    const transactionFeeConfig2 =
+      transactionFeeModule.feeAnalyzer.getFeeConfig(methodId2);
+    const transactionFee2 = transactionFeeModule.getFee(transactionFeeConfig2);
+    expect(transactionFee2.toString()).toEqual("9");
 
     const tx3 = await appChain.transaction(
       senderKey.toPublicKey(),
       async () => {
         await testModule2.Method_4();
-      }
+      },
+      { nonce: 1 }
     );
 
     await tx3.sign();
     await tx3.send();
+    const methodId3 = tx3.transaction?.methodId.toBigInt();
+    expectDefined(methodId3);
+    const transactionFeeConfig3 =
+      transactionFeeModule.feeAnalyzer.getFeeConfig(methodId3);
+    const transactionFee3 = transactionFeeModule.getFee(transactionFeeConfig3);
+    expect(transactionFee3.toString()).toEqual("7");
 
     const tx4 = await appChain.transaction(
       senderKey.toPublicKey(),
       async () => {
         await testModule2.Method_7();
-      }
+      },
+      { nonce: 2 }
     );
 
     await tx4.sign();
     await tx4.send();
 
+    const methodId4 = tx4.transaction?.methodId.toBigInt();
+    expectDefined(methodId4);
+    const transactionFeeConfig4 =
+      transactionFeeModule.feeAnalyzer.getFeeConfig(methodId4);
+    const transactionFee4 = transactionFeeModule.getFee(transactionFeeConfig4);
+    expect(transactionFee4.toString()).toEqual("6");
+
     const tx5 = await appChain.transaction(
       senderKey.toPublicKey(),
       async () => {
         await testModule1.Method_10();
-      }
+      },
+      { nonce: 3 }
     );
 
     await tx5.sign();
     await tx5.send();
+
+    const methodId5 = tx5.transaction?.methodId.toBigInt();
+    expectDefined(methodId5);
+    const transactionFeeConfig5 =
+      transactionFeeModule.feeAnalyzer.getFeeConfig(methodId5);
+    const transactionFee5 = transactionFeeModule.getFee(transactionFeeConfig5);
+    expect(transactionFee5.toString()).toEqual("8");
 
     await appChain.produceBlock();
 
@@ -266,9 +296,9 @@ describe("check fee analyzer", () => {
       );
 
     expectDefined(senderBalance);
-    expect(senderBalance.toString()).toBe("990");
+    expect(senderBalance.toString()).toBe("970");
 
     expectDefined(feeRecipientBalance);
-    expect(feeRecipientBalance.toString()).toBe("10");
+    expect(feeRecipientBalance.toString()).toBe("30");
   });
 });
