@@ -9,7 +9,7 @@ export class InMemoryLinkedMerkleTreeStorage implements LinkedMerkleTreeStore {
 
   protected leaves: {
     [key: string]: LinkedLeaf;
-  } = {};
+  } = { "0": { value: 0n, path: 0, nextPath: 0 } };
 
   public getNode(index: bigint, level: number): bigint | undefined {
     return this.nodes[level]?.[index.toString()];
@@ -21,19 +21,6 @@ export class InMemoryLinkedMerkleTreeStorage implements LinkedMerkleTreeStore {
 
   public getLeaf(index: bigint): LinkedLeaf | undefined {
     return this.leaves[index.toString()];
-  }
-
-  // This gets the leaf with the closest path.
-  public getClosestPath(path: number): LinkedLeaf {
-    // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-    let largestLeaf = this.getLeaf(0n) as LinkedLeaf;
-    while (largestLeaf.nextPath < path) {
-      // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-      const nextIndex = this.getLeafIndex(largestLeaf.nextPath) as bigint;
-      // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-      largestLeaf = this.getLeaf(nextIndex) as LinkedLeaf;
-    }
-    return largestLeaf;
   }
 
   public setLeaf(index: bigint, value: LinkedLeaf): void {
@@ -48,5 +35,22 @@ export class InMemoryLinkedMerkleTreeStorage implements LinkedMerkleTreeStore {
       return undefined;
     }
     return BigInt(leafIndex);
+  }
+
+  public getMaximumIndex(): bigint {
+    return BigInt(Object.keys(this.leaves).length) - 1n;
+  }
+
+  // This gets the leaf with the closest path.
+  public getClosestPath(path: number): LinkedLeaf {
+    // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+    let largestLeaf = this.getLeaf(0n) as LinkedLeaf;
+    while (largestLeaf.nextPath < path) {
+      // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+      const nextIndex = this.getLeafIndex(largestLeaf.nextPath) as bigint;
+      // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+      largestLeaf = this.getLeaf(nextIndex) as LinkedLeaf;
+    }
+    return largestLeaf;
   }
 }

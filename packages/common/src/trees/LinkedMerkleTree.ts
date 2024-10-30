@@ -19,7 +19,6 @@ class LinkedLeaf extends Struct({
 
 export interface AbstractLinkedMerkleTree {
   store: LinkedMerkleTreeStore;
-  readonly leafCount: bigint;
   /**
    * Returns a node which lives at a given index and level.
    * @param level Level of the node.
@@ -36,20 +35,20 @@ export interface AbstractLinkedMerkleTree {
 
   /**
    * Sets the value of a leaf node at a given index to a given value.
-   * @param index Position of the leaf node.
-   * @param leaf New value.
+   * @param path of the leaf node.
+   * @param value New value.
    */
-  setLeaf(index: bigint, leaf: LinkedLeaf): void;
+  setLeaf(path: number, value: bigint): void;
 
   /**
    * Returns a leaf which lives at a given path.
    * @param path Index of the node.
    * @returns The data of the leaf.
    */
-  getLeaf(path: number): LinkedLeaf | undefined;
+  getLeaf(path: number): LinkedLeaf;
 
   /**
-   * Returns a leaf which lives at a given path.
+   * Returns a leaf which is closest to a given path.
    * @param path Index of the node.
    * @returns The data of the leaf.
    */
@@ -74,8 +73,6 @@ export interface AbstractLinkedMerkleTreeClass {
   HEIGHT: number;
 
   EMPTY_ROOT: bigint;
-
-  get leafCount(): bigint;
 }
 
 export function createLinkedMerkleTree(
@@ -160,6 +157,13 @@ export function createLinkedMerkleTree(
           ].toString()
         );
     }
+
+    public static dummy() {
+      return new LinkedMerkleWitness({
+        isLeft: Array<Bool>(height - 1).fill(Bool(false)),
+        path: Array<Field>(height - 1).fill(Field(0)),
+      });
+    }
   }
 
   return class AbstractLinkedRollupMerkleTree
@@ -172,10 +176,6 @@ export function createLinkedMerkleTree(
     )
       .getRoot()
       .toBigInt();
-
-    public static get leafCount(): bigint {
-      return 2n ** BigInt(AbstractLinkedRollupMerkleTree.HEIGHT - 1);
-    }
 
     public static WITNESS = LinkedMerkleWitness;
 
@@ -199,14 +199,7 @@ export function createLinkedMerkleTree(
       }
     }
 
-    public assertIndexRange(index: bigint) {
-      if (index > this.leafCount) {
-        throw new Error("Index greater than maximum leaf number");
-      }
-    }
-
     public getNode(level: number, index: bigint): Field {
-      this.assertIndexRange(index);
       return Field(this.store.getNode(index, level) ?? this.zeroes[level]);
     }
 
@@ -215,14 +208,14 @@ export function createLinkedMerkleTree(
      * @param path path of the node.
      * @returns The data of the node.
      */
-    public getLeaf(path: number): LinkedLeaf | undefined {
+    public getLeaf(path: number): LinkedLeaf {
       const index = this.store.getLeafIndex(path);
       if (index === undefined) {
-        return index;
+        throw new Error("Path does not exist in tree.");
       }
       const leaf = this.store.getLeaf(BigInt(index));
       if (leaf === undefined) {
-        return undefined;
+        throw new Error("Index does not exist in tree.");
       }
       return {
         value: Field(leaf.value),
@@ -258,24 +251,68 @@ export function createLinkedMerkleTree(
     }
 
     /**
-     * Sets the value of a leaf node at a given index to a given value.
-     * @param index Position of the leaf node.
-     * @param leaf New value.
+     * Sets the value of a leaf node at a given path to a given value.
+     * @param path Position of the leaf node.
+     * @param value New value.
      */
-    public setLeaf(path: bigint, leaf: LinkedLeaf) {
-      this.setNode(0, index, leaf);
-      let currentIndex = index;
+    public setLeaf(path: number, value: bigint) {
+      const prevLeaf = this.store.getClosestPath(path);
+      // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+      let prevLeafIndex = this.store.getLeafIndex(path) as bigint;
+      const newPrevLeaf = {
+        value: prevLeaf.value,
+        path: prevLeaf.path,
+        nextPath: path,
+      };
+      this.store.setLeaf(prevLeafIndex, newPrevLeaf);
+      const prevLeafFields = this.getLeaf(prevLeaf.path);
+      this.setNode(
+        0,
+        prevLeafIndex,
+        Poseidon.hash([
+          prevLeafFields.value,
+          prevLeafFields.path,
+          prevLeafFields.nextPath,
+        ])
+      );
+
+      const newLeaf = {
+        value: value,
+        path: path,
+        nextPath: prevLeaf.nextPath,
+      };
+      let newLeafIndex = this.store.getMaximumIndex() + 1n;
+      this.store.setLeaf(newLeafIndex, newLeaf);
+      const newLeafFields = this.getLeaf(path);
+      this.setNode(
+        0,
+        newLeafIndex,
+        Poseidon.hash([
+          newLeafFields.value,
+          newLeafFields.path,
+          newLeafFields.nextPath,
+        ])
+      );
+
       for (
         let level = 1;
         level < AbstractLinkedRollupMerkleTree.HEIGHT;
         level += 1
       ) {
-        currentIndex /= 2n;
+        prevLeafIndex /= 2n;
+        newLeafIndex /= 2n;
 
-        const left = this.getNode(level - 1, currentIndex * 2n);
-        const right = this.getNode(level - 1, currentIndex * 2n + 1n);
+        const leftPrev = this.getNode(level - 1, prevLeafIndex * 2n);
+        const rightPrev = this.getNode(level - 1, prevLeafIndex * 2n + 1n);
+        const leftNew = this.getNode(level - 1, newLeafIndex * 2n);
+        const rightNew = this.getNode(level - 1, newLeafIndex * 2n + 1n);
 
-        this.setNode(level, currentIndex, Poseidon.hash([left, right]));
+        this.setNode(
+          level,
+          prevLeafIndex,
+          Poseidon.hash([leftPrev, rightPrev])
+        );
+        this.setNode(level, prevLeafIndex, Poseidon.hash([leftNew, rightNew]));
       }
     }
 
@@ -283,7 +320,7 @@ export function createLinkedMerkleTree(
      * Returns the witness (also known as
      * [Merkle Proof or Merkle Witness](https://computersciencewiki.org/index.php/Merkle_proof))
      * for the leaf at the given index.
-     * @param index Position of the leaf node.
+     * @param path of the leaf node.
      * @returns The witness that belongs to the leaf.
      */
     public getWitness(path: number): LinkedMerkleWitness {
@@ -313,14 +350,6 @@ export function createLinkedMerkleTree(
         isLeft: isLefts,
         path: pathArray,
       });
-    }
-
-    /**
-     * Returns the amount of leaf nodes.
-     * @returns Amount of leaf nodes.
-     */
-    public get leafCount(): bigint {
-      return AbstractLinkedRollupMerkleTree.leafCount;
     }
   };
 }
