@@ -45,9 +45,10 @@ export class DispatchContractProtocolModule extends ContractModule<
   }
 
   public async compile(registry: CompileRegistry) {
-    return await registry.compileModule(
-      "DispatchSmartContract",
-      () => DispatchSmartContract
-    );
+    return await registry.compileModule(async (compiler) => ({
+      DispatchSmartContract: await compiler.compileContract(
+        DispatchSmartContract
+      ),
+    }));
   }
 }

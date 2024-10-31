@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment,@typescript-eslint/no-unsafe-argument */
 import { ZkProgram } from "o1js";
-import { DependencyContainer, injectable } from "tsyringe";
+import { container, DependencyContainer, injectable } from "tsyringe";
 import {
   StringKeyOf,
   ModuleContainer,
@@ -16,6 +16,11 @@ import {
   MethodPublicOutput,
   StateServiceProvider,
   SimpleAsyncStateService,
+  CompilableModule,
+  CompileRegistry,
+  RuntimeMethodExecutionContext,
+  RuntimeTransaction,
+  NetworkState,
 } from "@proto-kit/protocol";
 
 import {
@@ -264,7 +269,7 @@ export class RuntimeZkProgrammable<
 @injectable()
 export class Runtime<Modules extends RuntimeModulesRecord>
   extends ModuleContainer<Modules>
-  implements RuntimeEnvironment
+  implements RuntimeEnvironment, CompilableModule
 {
   public static from<Modules extends RuntimeModulesRecord>(
     definition: RuntimeDefinition<Modules>
@@ -376,6 +381,17 @@ export class Runtime<Modules extends RuntimeModulesRecord>
    */
   public get runtimeModuleNames() {
     return Object.keys(this.definition.modules);
+  }
+
+  public async compile(registry: CompileRegistry) {
+    return await registry.compileModule(async () => {
+      const context = container.resolve(RuntimeMethodExecutionContext);
+      context.setup({
+        transaction: RuntimeTransaction.dummyTransaction(),
+        networkState: NetworkState.empty(),
+      });
+      return await this.zkProgrammable.compile();
+    });
   }
 }
 /* eslint-enable @typescript-eslint/no-unsafe-assignment,@typescript-eslint/no-unsafe-argument */

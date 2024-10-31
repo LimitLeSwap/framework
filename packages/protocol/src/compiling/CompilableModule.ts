@@ -1,6 +1,6 @@
 import type { CompileRegistry } from "./CompileRegistry";
-import { Artifact } from "./AtomicCompileHelper";
+import { ArtifactRecord } from "./AtomicCompileHelper";
 
 export interface CompilableModule {
-  compile(registry: CompileRegistry): Promise<Artifact | void>;
+  compile(registry: CompileRegistry): Promise<ArtifactRecord | void>;
 }

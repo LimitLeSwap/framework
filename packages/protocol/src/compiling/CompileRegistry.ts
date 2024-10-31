@@ -1,15 +1,11 @@
 import { inject, injectable, singleton } from "tsyringe";
 import {
   AreProofsEnabled,
+  CompileArtifact,
   mapSequential,
-  MOCK_VERIFICATION_KEY,
 } from "@proto-kit/common";
 
-import {
-  Artifact,
-  AtomicCompileHelper,
-  GenericCompileTarget,
-} from "./AtomicCompileHelper";
+import { ArtifactRecord, AtomicCompileHelper } from "./AtomicCompileHelper";
 import { CompilableModule } from "./CompilableModule";
 
 /**
@@ -29,61 +25,60 @@ export class CompileRegistry {
 
   public compile: AtomicCompileHelper;
 
-  private artifacts: Record<string, Artifact | "compiled-but-no-artifact"> = {};
+  private artifacts: ArtifactRecord = {};
 
-  public async compileModule<ReturnArtifact extends Artifact>(
-    // TODO Make name inferred by the module token
-    name: string,
+  public async compileModule(
     compile: (
-      registry: CompileRegistry,
+      compiler: AtomicCompileHelper,
       ...args: unknown[]
-    ) => GenericCompileTarget<ReturnArtifact>,
+    ) => Promise<ArtifactRecord>,
     dependencies: Record<string, CompilableModule> = {}
-  ): Promise<ReturnArtifact | undefined> {
+  ): Promise<ArtifactRecord | undefined> {
     const collectedArtifacts = await mapSequential(
       Object.entries(dependencies),
       async ([depName, dep]) => {
         if (this.artifacts[depName] !== undefined) {
           return this.artifacts[depName];
         }
-        const artifact =
-          (await dep.compile(this)) ?? "compiled-but-no-artifact";
-        this.artifacts[depName] = artifact;
+        const artifact = await dep.compile(this);
+        if (artifact !== undefined) {
+          this.artifacts = {
+            ...this.artifacts,
+            ...artifact,
+          };
+        }
         return artifact;
       }
     );
 
-    const target = compile(this, ...collectedArtifacts);
-    const artifact = await this.compile.program<ReturnArtifact>(name, target);
+    const artifacts = await compile(this.compile, ...collectedArtifacts);
 
-    this.artifacts[name] = artifact ?? "compiled-but-no-artifact";
+    this.artifacts = {
+      ...this.artifacts,
+      ...artifacts,
+    };
 
-    return artifact;
+    return artifacts;
   }
 
-  public getArtifact<ArtifactType extends Artifact>(name: string) {
+  public getArtifact(name: string) {
     if (this.artifacts[name] === undefined) {
       throw new Error(
         `Artifact for ${name} not available, did you compile it via the CompileRegistry?`
       );
     }
-    if (!this.areProofsEnabled.areProofsEnabled) {
-      return MOCK_VERIFICATION_KEY;
-    }
 
-    const artifact = this.artifacts[name];
-    if (artifact === "compiled-but-no-artifact") {
-      throw new Error(
-        `Module ${name} didn't return the requested artifact even though proofs are enabled`
-      );
-    }
-    // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-    return artifact as ArtifactType;
+    return this.artifacts[name];
   }
 
-  public addArtifactsRaw(artifacts: Record<string, Artifact>) {
-    Object.entries(artifacts).forEach(([key, value]) => {
-      this.artifacts[key] = value;
-    });
+  public addArtifactsRaw(artifacts: ArtifactRecord) {
+    this.artifacts = {
+      ...this.artifacts,
+      ...artifacts,
+    };
+  }
+
+  public getAllArtifacts() {
+    return this.artifacts;
   }
 }

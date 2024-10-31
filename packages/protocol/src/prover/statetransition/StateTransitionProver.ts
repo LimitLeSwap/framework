@@ -30,7 +30,7 @@ import {
 import { StateTransitionWitnessProvider } from "./StateTransitionWitnessProvider";
 import { StateTransitionWitnessProviderReference } from "./StateTransitionWitnessProviderReference";
 import { CompilableModule } from "../../compiling/CompilableModule";
-import { Artifact } from "../../compiling/AtomicCompileHelper";
+import { ArtifactRecord } from "../../compiling/AtomicCompileHelper";
 import { CompileRegistry } from "../../compiling/CompileRegistry";
 
 const errors = {
@@ -367,10 +367,9 @@ export class StateTransitionProver
     );
   }
 
-  public compile(registry: CompileRegistry): Promise<void | Artifact> {
+  public compile(registry: CompileRegistry): Promise<void | ArtifactRecord> {
     return registry.compileModule(
-      "StateTransitionProver",
-      () => this.zkProgrammable
+      async () => await this.zkProgrammable.compile()
     );
   }
 

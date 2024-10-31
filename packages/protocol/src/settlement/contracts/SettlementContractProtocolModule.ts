@@ -8,7 +8,7 @@ import {
 } from "../ContractModule";
 import { ProvableSettlementHook } from "../modularity/ProvableSettlementHook";
 import { CompileRegistry } from "../../compiling/CompileRegistry";
-import { Artifact } from "../../compiling/AtomicCompileHelper";
+import { ArtifactRecord } from "../../compiling/AtomicCompileHelper";
 
 import { DispatchSmartContractBase } from "./DispatchSmartContract";
 import {
@@ -78,23 +78,22 @@ export class SettlementContractProtocolModule extends ContractModule<
 
   public async compile(
     registry: CompileRegistry
-  ): Promise<Artifact | undefined> {
+  ): Promise<ArtifactRecord | undefined> {
     return await registry.compileModule(
-      "SettlementContract",
-      (
-        registry2: CompileRegistry,
-        bridgeVk: unknown,
-        blockProverVk: unknown
-      ) => {
+      async (compiler, bridgeVk: unknown, blockProverVk: unknown) => {
         SettlementSmartContractBase.args.BridgeContractVerificationKey =
           // TODO Infer type
           bridgeVk as VerificationKey;
 
-        return SettlementSmartContract;
+        return {
+          SettlementSmartContract: await compiler.compileContract(
+            SettlementSmartContract
+          ),
+        };
       },
       {
         BridgeContract: this.bridgeContractModule,
-        BlockProver: this.blockProver.zkProgrammable,
+        BlockProver: this.blockProver,
       }
     );
   }

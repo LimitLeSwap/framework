@@ -929,8 +929,7 @@ export class BlockProver
     registry: CompileRegistry
   ): Promise<Record<string, CompileArtifact> | undefined> {
     return await registry.compileModule(
-      "BlockProver",
-      () => this.zkProgrammable
+      async () => await this.zkProgrammable.compile()
     );
   }
 

@@ -1,61 +1,49 @@
 import {
   AreProofsEnabled,
+  CompileArtifact,
   log,
   MOCK_VERIFICATION_KEY,
 } from "@proto-kit/common";
+import { SmartContract, VerificationKey } from "o1js";
 
-export type Artifact = string | object | undefined;
+export type ArtifactRecord = Record<string, CompileArtifact>;
 
-export type GenericCompileTarget<T extends Artifact> = {
-  compile: () => Promise<T>;
+export type CompileTarget = {
+  name: string;
+  compile: () => Promise<CompileArtifact>;
 };
 
 export class AtomicCompileHelper {
   public constructor(private readonly areProofsEnabled: AreProofsEnabled) {}
 
   private compilationPromises: {
-    [key: string]: Promise<Artifact | undefined>;
+    [key: string]: Promise<CompileArtifact>;
   } = {};
 
-  // Generic params for zkProgrammable should be unknown, but verify makes those types invariant
-  // public async zkProgrammable(zkProgrammable: ZkProgrammable<any, any>) {
-  //   await reduceSequential(
-  //     zkProgrammable.zkProgram,
-  //     async (acc, program) => {
-  //       const res = await this.program(program);
-  //       return {
-  //         ...acc,
-  //         [program.name]: res,
-  //       };
-  //     },
-  //     {}
-  //   );
-  // }
-
-  public async program<ReturnArtifact extends Artifact>(
-    name: string,
-    contract: GenericCompileTarget<ReturnArtifact>,
+  public async compileContract(
+    contract: CompileTarget,
     overrideProofsEnabled?: boolean
-  ): Promise<ReturnArtifact> {
+  ): Promise<CompileArtifact> {
     let newPromise = false;
+    const { name } = contract;
     if (this.compilationPromises[name] === undefined) {
       const proofsEnabled =
         overrideProofsEnabled ?? this.areProofsEnabled.areProofsEnabled;
-      if (proofsEnabled) {
+      // This wierd any is necessary otherwise the compiler optimized that check away
+      if (proofsEnabled || !((contract as any) instanceof SmartContract)) {
         log.time(`Compiling ${name}`);
         this.compilationPromises[name] = contract.compile();
         newPromise = true;
       } else {
-        // TODO Mock VK here is not at all generalized and safe
-        //  Better way would be to package the Smart contracts into a mock-compile as well
-        this.compilationPromises[name] = Promise.resolve(MOCK_VERIFICATION_KEY);
+        this.compilationPromises[name] = Promise.resolve({
+          verificationKey: MOCK_VERIFICATION_KEY,
+        });
       }
     }
     const result = await this.compilationPromises[name];
     if (newPromise) {
       log.timeEnd.info(`Compiling ${name}`);
     }
-    // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-    return result as ReturnArtifact;
+    return result;
   }
 }

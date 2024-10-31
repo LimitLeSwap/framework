@@ -7,7 +7,7 @@ import {
 import { SmartContract } from "o1js";
 import { CompilableModule } from "../compiling/CompilableModule";
 import type { CompileRegistry } from "../compiling/CompileRegistry";
-import { Artifact } from "../compiling/AtomicCompileHelper";
+import { ArtifactRecord } from "../compiling/AtomicCompileHelper";
 
 export type SmartContractClassFromInterface<Type> = typeof SmartContract &
   TypedClass<Type>;
@@ -28,5 +28,5 @@ export abstract class ContractModule<ContractType, Config = NoConfig>
 
   public abstract compile(
     registry: CompileRegistry
-  ): Promise<Artifact | undefined>;
+  ): Promise<ArtifactRecord | undefined>;
 }
