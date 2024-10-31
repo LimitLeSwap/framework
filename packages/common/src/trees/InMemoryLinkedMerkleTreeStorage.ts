@@ -45,7 +45,7 @@ export class InMemoryLinkedMerkleTreeStorage implements LinkedMerkleTreeStore {
   public getPathLessOrEqual(path: number): LinkedLeaf {
     // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
     let largestLeaf = this.getLeaf(0n) as LinkedLeaf;
-    while (largestLeaf.nextPath < path) {
+    while (largestLeaf.nextPath <= path) {
       // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
       const nextIndex = this.getLeafIndex(largestLeaf.nextPath) as bigint;
       // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
