@@ -134,9 +134,7 @@ export class BlockReductionTask
   }
 
   public async prepare(): Promise<void> {
-    await this.compileRegistry.compile(
-      this.blockProver.zkProgrammable.zkProgram[0]
-    );
+    await this.blockProver.compile(this.compileRegistry);
   }
 }
 
@@ -301,11 +299,8 @@ export class BlockProvingTask
     );
   }
 
-  // eslint-disable-next-line sonarjs/no-identical-functions
   public async prepare(): Promise<void> {
     // Compile
-    await this.compileRegistry.compile(
-      this.blockProver.zkProgrammable.zkProgram[0]
-    );
+    await this.blockProver.compile(this.compileRegistry);
   }
 }

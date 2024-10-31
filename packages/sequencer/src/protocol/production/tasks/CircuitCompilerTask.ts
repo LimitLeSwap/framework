@@ -9,6 +9,8 @@ import {
   RuntimeMethodExecutionContext,
   RuntimeTransaction,
   SettlementContractModule,
+  Artifact,
+  CompileRegistry,
 } from "@proto-kit/protocol";
 
 import { TaskSerializer } from "../../../worker/flow/Task";
@@ -21,15 +23,19 @@ export type CompiledCircuitsRecord = {
   runtimeCircuits: VKRecord;
 };
 
+export type CompilerTaskParams = {
+  existingArtifacts: Record<string, Artifact>;
+};
+
 type VKRecordLite = Record<string, { vk: { hash: string; data: string } }>;
 
-export class UndefinedSerializer implements TaskSerializer<undefined> {
-  public toJSON(parameters: undefined): string {
-    return "";
+export class SimpleJSONSerializer<Type> implements TaskSerializer<Type> {
+  public toJSON(parameters: Type): string {
+    return JSON.stringify(parameters);
   }
 
-  public fromJSON(json: string): undefined {
-    return undefined;
+  public fromJSON(json: string): Type {
+    return JSON.parse(json) as Type;
   }
 }
 
@@ -64,20 +70,21 @@ export class VKResultSerializer {
 @injectable()
 @scoped(Lifecycle.ContainerScoped)
 export class CircuitCompilerTask extends UnpreparingTask<
-  undefined,
+  CompilerTaskParams,
   CompiledCircuitsRecord
 > {
   public name = "compiledCircuit";
 
   public constructor(
     @inject("Runtime") protected readonly runtime: Runtime<never>,
-    @inject("Protocol") protected readonly protocol: Protocol<any>
+    @inject("Protocol") protected readonly protocol: Protocol<any>,
+    private readonly compileRegistry: CompileRegistry
   ) {
     super();
   }
 
-  public inputSerializer(): TaskSerializer<undefined> {
-    return new UndefinedSerializer();
+  public inputSerializer(): TaskSerializer<CompilerTaskParams> {
+    return new SimpleJSONSerializer<CompilerTaskParams>();
   }
 
   public resultSerializer(): TaskSerializer<CompiledCircuitsRecord> {
@@ -140,7 +147,7 @@ export class CircuitCompilerTask extends UnpreparingTask<
   public async compileProtocolCircuits(): Promise<
     [string, VerificationKey][][]
   > {
-    // We only care about the BridgeContract for now - later with cachine,
+    // We only care about the BridgeContract for now - later with caching,
     // we might want to expand that to all protocol circuits
     const container = this.protocol.dependencyContainer;
     if (container.isRegistered("SettlementContractModule")) {
@@ -167,7 +174,11 @@ export class CircuitCompilerTask extends UnpreparingTask<
     }, {});
   }
 
-  public async compute(): Promise<CompiledCircuitsRecord> {
+  public async compute(
+    input: CompilerTaskParams
+  ): Promise<CompiledCircuitsRecord> {
+    this.compileRegistry.addArtifactsRaw(input.existingArtifacts);
+
     log.info("Computing VKs");
 
     const runtimeTuples = await this.compileRuntimeMethods();

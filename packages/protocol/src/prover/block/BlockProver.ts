@@ -12,6 +12,7 @@ import {
 import { container, inject, injectable, injectAll } from "tsyringe";
 import {
   AreProofsEnabled,
+  CompileArtifact,
   PlainZkProgram,
   provableMethod,
   WithZkProgrammable,
@@ -41,6 +42,7 @@ import {
   MinaActionsHashList,
 } from "../../utils/MinaPrefixedProvableHashList";
 import { StateTransitionReductionList } from "../../utils/StateTransitionReductionList";
+import { CompileRegistry } from "../../compiling/CompileRegistry";
 
 import {
   BlockProvable,
@@ -60,6 +62,7 @@ import {
   RuntimeVerificationKeyAttestation,
 } from "./accummulators/RuntimeVerificationKeyTree";
 import { RuntimeVerificationKeyRootService } from "./services/RuntimeVerificationKeyRootService";
+import { CompilableModule } from "../../compiling/CompilableModule";
 
 const errors = {
   stateProofNotStartingAtZero: () =>
@@ -148,6 +151,8 @@ export class BlockProverProgrammable extends ZkProgrammable<
   ) {
     super();
   }
+
+  name = "BlockProver";
 
   public get areProofsEnabled(): AreProofsEnabled | undefined {
     return this.prover.areProofsEnabled;
@@ -889,7 +894,10 @@ export class BlockProverProgrammable extends ZkProgrammable<
  * then be merged to be committed to the base-layer contract
  */
 @injectable()
-export class BlockProver extends ProtocolModule implements BlockProvable {
+export class BlockProver
+  extends ProtocolModule
+  implements BlockProvable, CompilableModule
+{
   public zkProgrammable: BlockProverProgrammable;
 
   public constructor(
@@ -914,6 +922,15 @@ export class BlockProver extends ProtocolModule implements BlockProvable {
       transactionHooks,
       blockHooks,
       verificationKeyService
+    );
+  }
+
+  public async compile(
+    registry: CompileRegistry
+  ): Promise<Record<string, CompileArtifact> | undefined> {
+    return await registry.compileModule(
+      "BlockProver",
+      () => this.zkProgrammable
     );
   }
 

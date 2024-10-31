@@ -3,6 +3,7 @@ import { Memoize } from "typescript-memoize";
 
 import { log } from "../log";
 import { dummyVerificationKey } from "../dummyVerificationKey";
+import { reduceSequential } from "../utils";
 
 import { MOCK_PROOF } from "./provableMethod";
 
@@ -125,6 +126,21 @@ export abstract class ZkProgrammable<
         compile: compileToMockable(bucket.compile, this.areProofsEnabled),
       };
     });
+  }
+
+  public async compile() {
+    return await reduceSequential(
+      this.zkProgram,
+      async (acc, program) => {
+        const result = await program.compile();
+        return {
+          ...acc,
+          [program.name]: result,
+        };
+      },
+      // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+      {} as Record<string, CompileArtifact>
+    );
   }
 }
 

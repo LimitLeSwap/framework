@@ -37,9 +37,13 @@ export class SequencerStartupModule extends SequencerModule {
 
     const vks = await flow.withFlow<CompiledCircuitsRecord>(
       async (res, rej) => {
-        await flow.pushTask(this.compileTask, undefined, async (result) => {
-          res(result);
-        });
+        await flow.pushTask(
+          this.compileTask,
+          { existingArtifacts: {} },
+          async (result) => {
+            res(result);
+          }
+        );
       }
     );
 

@@ -4,6 +4,7 @@ import { WithZkProgrammable } from "@proto-kit/common";
 import { StateTransitionProvableBatch } from "../../model/StateTransitionProvableBatch";
 
 import { StateTransitionWitnessProviderReference } from "./StateTransitionWitnessProviderReference";
+import { CompilableModule } from "../../compiling/CompilableModule";
 
 export class StateTransitionProverPublicInput extends Struct({
   stateTransitionsHash: Field,
@@ -26,9 +27,10 @@ export type StateTransitionProof = Proof<
 
 export interface StateTransitionProvable
   extends WithZkProgrammable<
-    StateTransitionProverPublicInput,
-    StateTransitionProverPublicOutput
-  > {
+      StateTransitionProverPublicInput,
+      StateTransitionProverPublicOutput
+    >,
+    CompilableModule {
   witnessProviderReference: StateTransitionWitnessProviderReference;
 
   runBatch: (

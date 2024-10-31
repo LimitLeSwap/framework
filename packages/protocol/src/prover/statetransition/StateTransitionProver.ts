@@ -29,6 +29,9 @@ import {
 } from "./StateTransitionProvable";
 import { StateTransitionWitnessProvider } from "./StateTransitionWitnessProvider";
 import { StateTransitionWitnessProviderReference } from "./StateTransitionWitnessProviderReference";
+import { CompilableModule } from "../../compiling/CompilableModule";
+import { Artifact } from "../../compiling/AtomicCompileHelper";
+import { CompileRegistry } from "../../compiling/CompileRegistry";
 
 const errors = {
   propertyNotMatching: (property: string, step: string) =>
@@ -346,7 +349,10 @@ export class StateTransitionProverProgrammable extends ZkProgrammable<
 @injectable()
 export class StateTransitionProver
   extends ProtocolModule
-  implements StateTransitionProvable, StateTransitionProverType
+  implements
+    StateTransitionProvable,
+    StateTransitionProverType,
+    CompilableModule
 {
   public zkProgrammable: StateTransitionProverProgrammable;
 
@@ -358,6 +364,13 @@ export class StateTransitionProver
     this.zkProgrammable = new StateTransitionProverProgrammable(
       this,
       witnessProviderReference
+    );
+  }
+
+  public compile(registry: CompileRegistry): Promise<void | Artifact> {
+    return registry.compileModule(
+      "StateTransitionProver",
+      () => this.zkProgrammable
     );
   }
 

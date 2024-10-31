@@ -56,7 +56,7 @@ export function reduceSequential<T, U>(
     array: T[]
   ) => Promise<U>,
   initialValue: U
-) {
+): Promise<U> {
   return array.reduce<Promise<U>>(
     async (previousPromise, current, index, arr) => {
       const previous = await previousPromise;

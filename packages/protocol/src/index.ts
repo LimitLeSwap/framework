@@ -1,3 +1,6 @@
+export * from "./compiling/AtomicCompileHelper";
+export * from "./compiling/CompileRegistry";
+export * from "./compiling/CompilableModule";
 export * from "./hooks/AccountStateHook";
 export * from "./hooks/BlockHeightHook";
 export * from "./hooks/LastStateRootBlockHook";
@@ -17,7 +20,6 @@ export * from "./utils/MinaPrefixedProvableHashList";
 export * from "./utils/ProvableReductionHashList";
 export * from "./utils/StateTransitionReductionList";
 export * from "./utils/utils";
-export * from "./utils/CompileRegistry";
 export * from "./prover/block/BlockProver";
 export * from "./prover/block/BlockProvable";
 export * from "./prover/block/accummulators/RuntimeVerificationKeyTree";

@@ -187,8 +187,6 @@ export class NewBlockTask
 
   public async prepare(): Promise<void> {
     // Compile
-    await this.compileRegistry.compileZkProgrammable(
-      this.blockProver.zkProgrammable
-    );
+    await this.blockProver.compile(this.compileRegistry);
   }
 }

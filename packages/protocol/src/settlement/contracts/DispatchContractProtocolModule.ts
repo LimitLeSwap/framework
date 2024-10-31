@@ -6,7 +6,7 @@ import {
   ContractModule,
   SmartContractClassFromInterface,
 } from "../ContractModule";
-import { CompileRegistry } from "../../utils/CompileRegistry";
+import { CompileRegistry } from "../../compiling/CompileRegistry";
 
 import {
   DispatchSmartContract,
@@ -45,12 +45,9 @@ export class DispatchContractProtocolModule extends ContractModule<
   }
 
   public async compile(registry: CompileRegistry) {
-    const contractVk = await registry.compileSmartContract(
-      DispatchSmartContract
+    return await registry.compileModule(
+      "DispatchSmartContract",
+      () => DispatchSmartContract
     );
-
-    return {
-      DispatchSmartContract: contractVk,
-    };
   }
 }

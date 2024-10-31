@@ -1,13 +1,13 @@
 import { injectable } from "tsyringe";
 
 import { ContractModule } from "../ContractModule";
+import { CompileRegistry } from "../../compiling/CompileRegistry";
 
 import {
   BridgeContract,
   BridgeContractBase,
   BridgeContractType,
 } from "./BridgeContract";
-import { CompileRegistry } from "../../utils/CompileRegistry";
 
 export type BridgeContractConfig = {
   withdrawalStatePath: `${string}.${string}`;
@@ -36,9 +36,6 @@ export class BridgeContractProtocolModule extends ContractModule<
   }
 
   public async compile(registry: CompileRegistry) {
-    const bridgeVK = await registry.compileSmartContract(BridgeContract);
-    return {
-      BridgeContract: bridgeVK,
-    };
+    return await registry.compileModule("BridgeContract", () => BridgeContract);
   }
 }

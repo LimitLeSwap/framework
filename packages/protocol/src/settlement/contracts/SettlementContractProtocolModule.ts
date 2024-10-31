@@ -1,5 +1,5 @@
-import { CompileArtifact } from "@proto-kit/common";
 import { inject, injectable, injectAll } from "tsyringe";
+import { VerificationKey } from "o1js";
 
 import { BlockProvable } from "../../prover/block/BlockProvable";
 import {
@@ -7,6 +7,8 @@ import {
   SmartContractClassFromInterface,
 } from "../ContractModule";
 import { ProvableSettlementHook } from "../modularity/ProvableSettlementHook";
+import { CompileRegistry } from "../../compiling/CompileRegistry";
+import { Artifact } from "../../compiling/AtomicCompileHelper";
 
 import { DispatchSmartContractBase } from "./DispatchSmartContract";
 import {
@@ -18,7 +20,6 @@ import {
 import { BridgeContractBase } from "./BridgeContract";
 import { DispatchContractProtocolModule } from "./DispatchContractProtocolModule";
 import { BridgeContractProtocolModule } from "./BridgeContractProtocolModule";
-import { CompileRegistry } from "../../utils/CompileRegistry";
 
 export type SettlementContractConfig = {
   escapeHatchSlotsInterval?: number;
@@ -36,7 +37,7 @@ export class SettlementContractProtocolModule extends ContractModule<
     @injectAll("ProvableSettlementHook")
     private readonly hooks: ProvableSettlementHook<unknown>[],
     @inject("BlockProver")
-    blockProver: BlockProvable,
+    private readonly blockProver: BlockProvable,
     @inject("DispatchContract")
     private readonly dispatchContractModule: DispatchContractProtocolModule,
     @inject("BridgeContract")
@@ -77,12 +78,24 @@ export class SettlementContractProtocolModule extends ContractModule<
 
   public async compile(
     registry: CompileRegistry
-  ): Promise<Record<string, CompileArtifact | undefined>> {
-    const settlementVK = await registry.compileSmartContract(
-      SettlementSmartContract
+  ): Promise<Artifact | undefined> {
+    return await registry.compileModule(
+      "SettlementContract",
+      (
+        registry2: CompileRegistry,
+        bridgeVk: unknown,
+        blockProverVk: unknown
+      ) => {
+        SettlementSmartContractBase.args.BridgeContractVerificationKey =
+          // TODO Infer type
+          bridgeVk as VerificationKey;
+
+        return SettlementSmartContract;
+      },
+      {
+        BridgeContract: this.bridgeContractModule,
+        BlockProver: this.blockProver.zkProgrammable,
+      }
     );
-    return {
-      SettlementContract: settlementVK,
-    };
   }
 }

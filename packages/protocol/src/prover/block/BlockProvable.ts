@@ -16,6 +16,7 @@ import { NetworkState } from "../../model/network/NetworkState";
 
 import { BlockHashMerkleTreeWitness } from "./accummulators/BlockHashMerkleTree";
 import { RuntimeVerificationKeyAttestation } from "./accummulators/RuntimeVerificationKeyTree";
+import { CompilableModule } from "../../compiling/CompilableModule";
 
 export class BlockProverPublicInput extends Struct({
   transactionsHash: Field,
@@ -77,7 +78,8 @@ export class DynamicRuntimeProof extends DynamicProof<
 }
 
 export interface BlockProvable
-  extends WithZkProgrammable<BlockProverPublicInput, BlockProverPublicOutput> {
+  extends WithZkProgrammable<BlockProverPublicInput, BlockProverPublicOutput>,
+    CompilableModule {
   proveTransaction: (
     publicInput: BlockProverPublicInput,
     stateProof: StateTransitionProof,

@@ -89,9 +89,7 @@ export class StateTransitionTask
   }
 
   public async prepare(): Promise<void> {
-    await this.compileRegistry.compile(
-      this.stateTransitionProver.zkProgrammable.zkProgram[0]
-    );
+    await this.stateTransitionProver.compile(this.compileRegistry);
   }
 }
 
@@ -140,10 +138,7 @@ export class StateTransitionReductionTask
       .result.prove<StateTransitionProof>();
   }
 
-  // eslint-disable-next-line sonarjs/no-identical-functions
   public async prepare(): Promise<void> {
-    await this.compileRegistry.compile(
-      this.stateTransitionProver.zkProgrammable.zkProgram[0]
-    );
+    await this.stateTransitionProver.compile(this.compileRegistry);
   }
 }
