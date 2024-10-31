@@ -58,21 +58,21 @@ export interface AbstractLinkedMerkleTree {
    * @param path of the leaf node.
    * @param value New value.
    */
-  setValue(path: number, value: bigint): void;
+  setValue(path: bigint, value: bigint): void;
 
   /**
    * Returns a leaf which lives at a given path.
    * @param path Index of the node.
    * @returns The data of the leaf.
    */
-  getLeaf(path: number): LinkedLeaf;
+  getLeaf(path: bigint): LinkedLeaf;
 
   /**
    * Returns a leaf which is closest to a given path.
    * @param path Index of the node.
    * @returns The data of the leaf.
    */
-  getPathLessOrEqual(path: number): LinkedLeaf;
+  getPathLessOrEqual(path: bigint): LinkedLeaf;
 
   /**
    * Returns the witness (also known as
@@ -81,7 +81,7 @@ export interface AbstractLinkedMerkleTree {
    * @param path Position of the leaf node.
    * @returns The witness that belongs to the leaf.
    */
-  getWitness(path: number): AbstractLinkedMerkleWitness;
+  getWitness(path: bigint): AbstractLinkedMerkleWitness;
 }
 
 export interface AbstractLinkedMerkleTreeClass {
@@ -210,7 +210,7 @@ export function createLinkedMerkleTree(
      * @param path path of the node.
      * @returns The data of the node.
      */
-    public getLeaf(path: number): LinkedLeaf {
+    public getLeaf(path: bigint): LinkedLeaf {
       const index = this.store.getLeafIndex(path);
       if (index === undefined) {
         throw new Error("Path does not exist in tree.");
@@ -230,7 +230,7 @@ export function createLinkedMerkleTree(
      * Returns the leaf with a path either equal to or less than the path specified.
      * @param path Position of the leaf node.
      * */
-    public getPathLessOrEqual(path: number): LinkedLeaf {
+    public getPathLessOrEqual(path: bigint): LinkedLeaf {
       const closestLeaf = this.store.getPathLessOrEqual(path);
       return {
         value: Field(closestLeaf.value),
@@ -284,7 +284,7 @@ export function createLinkedMerkleTree(
      * @param path Position of the leaf node.
      * @param value New value.
      */
-    public setValue(path: number, value: bigint) {
+    public setValue(path: bigint, value: bigint) {
       let index = this.store.getLeafIndex(path);
       const prevLeaf = this.store.getPathLessOrEqual(path);
       if (index === undefined) {
@@ -323,13 +323,13 @@ export function createLinkedMerkleTree(
      * i.e.  {vale: 0, path: 0, nextPath: Field.Max}
      */
     private setLeafInitialisation() {
-      const MAX_FIELD_VALUE = 2 ** 1000000;
+      const MAX_FIELD_VALUE: bigint = BigInt(2 ** 53 - 1);
       this.store.setLeaf(0n, {
         value: 0n,
-        path: 0,
+        path: 0n,
         nextPath: MAX_FIELD_VALUE,
       });
-      const initialLeaf = this.getLeaf(0);
+      const initialLeaf = this.getLeaf(0n);
       this.setLeaf(0n, initialLeaf);
     }
 
@@ -340,7 +340,7 @@ export function createLinkedMerkleTree(
      * @param path of the leaf node.
      * @returns The witness that belongs to the leaf.
      */
-    public getWitness(path: number): LinkedMerkleWitness {
+    public getWitness(path: bigint): LinkedMerkleWitness {
       const index = this.store.getLeafIndex(path);
       if (index === undefined) {
         throw new Error("Path does not exist in tree.");

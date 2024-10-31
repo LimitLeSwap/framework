@@ -27,7 +27,7 @@ export class InMemoryLinkedMerkleTreeStorage implements LinkedMerkleTreeStore {
     this.leaves[index.toString()] = value;
   }
 
-  public getLeafIndex(path: number): bigint | undefined {
+  public getLeafIndex(path: bigint): bigint | undefined {
     const leafIndex = Object.keys(this.leaves).find((key) => {
       return this.leaves[key].path === path;
     });
@@ -42,7 +42,7 @@ export class InMemoryLinkedMerkleTreeStorage implements LinkedMerkleTreeStore {
   }
 
   // This gets the leaf with the closest path.
-  public getPathLessOrEqual(path: number): LinkedLeaf {
+  public getPathLessOrEqual(path: bigint): LinkedLeaf {
     // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
     let largestLeaf = this.getLeaf(0n) as LinkedLeaf;
     while (largestLeaf.nextPath <= path) {

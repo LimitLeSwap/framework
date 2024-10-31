@@ -7,11 +7,11 @@ export interface LinkedMerkleTreeStore {
 
   getLeaf: (index: bigint) => LinkedLeaf | undefined;
 
-  getLeafIndex: (path: number) => bigint | undefined;
+  getLeafIndex: (path: bigint) => bigint | undefined;
 
-  getPathLessOrEqual: (path: number) => LinkedLeaf;
+  getPathLessOrEqual: (path: bigint) => LinkedLeaf;
 
   getMaximumIndex: () => bigint;
 }
 
-export type LinkedLeaf = { value: bigint; path: number; nextPath: number };
+export type LinkedLeaf = { value: bigint; path: bigint; nextPath: bigint };
