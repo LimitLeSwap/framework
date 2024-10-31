@@ -11,7 +11,7 @@ export interface AbstractLinkedMerkleWitness extends StructTemplate {
 
   /**
    * Calculates a root depending on the leaf value.
-   * @param leaf Value of the leaf node that belongs to this Witness.
+   * @param hash Value of the leaf node that belongs to this Witness.
    * @returns The calculated root.
    */
   calculateRoot(hash: Field): Field;
@@ -321,6 +321,10 @@ export function createLinkedMerkleTree(
       }
     }
 
+    /**
+     * Sets the value of a leaf node at initialisation,
+     * i.e.  {vale: 0, path: 0, nextPath: Field.Max}
+     */
     private setLeafInitialisation() {
       const MAX_FIELD_VALUE = 2 ** 1000000;
       this.store.setLeaf(0n, {
