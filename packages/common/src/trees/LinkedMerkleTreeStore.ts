@@ -9,7 +9,7 @@ export interface LinkedMerkleTreeStore {
 
   getLeafIndex: (path: number) => bigint | undefined;
 
-  getClosestPath: (path: number) => LinkedLeaf;
+  getPathLessOrEqual: (path: number) => LinkedLeaf;
 
   getMaximumIndex: () => bigint;
 }

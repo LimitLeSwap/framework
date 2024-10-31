@@ -72,7 +72,7 @@ export interface AbstractLinkedMerkleTree {
    * @param path Index of the node.
    * @returns The data of the leaf.
    */
-  getClosestPath(path: number): LinkedLeaf;
+  getPathLessOrEqual(path: number): LinkedLeaf;
 
   /**
    * Returns the witness (also known as
@@ -233,8 +233,8 @@ export function createLinkedMerkleTree(
      * Returns the leaf with a path either equal to or less than the path specified.
      * @param path Position of the leaf node.
      * */
-    public getClosestPath(path: number): LinkedLeaf {
-      const closestLeaf = this.store.getClosestPath(path);
+    public getPathLessOrEqual(path: number): LinkedLeaf {
+      const closestLeaf = this.store.getPathLessOrEqual(path);
       return {
         value: Field(closestLeaf.value),
         path: Field(closestLeaf.path),
@@ -264,7 +264,7 @@ export function createLinkedMerkleTree(
      * @param value New value.
      */
     public setLeaf(path: number, value: bigint) {
-      const prevLeaf = this.store.getClosestPath(path);
+      const prevLeaf = this.store.getPathLessOrEqual(path);
       // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
       let prevLeafIndex = this.store.getLeafIndex(path) as bigint;
       const newPrevLeaf = {

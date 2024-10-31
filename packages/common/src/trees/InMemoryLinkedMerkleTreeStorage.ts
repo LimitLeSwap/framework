@@ -42,7 +42,7 @@ export class InMemoryLinkedMerkleTreeStorage implements LinkedMerkleTreeStore {
   }
 
   // This gets the leaf with the closest path.
-  public getClosestPath(path: number): LinkedLeaf {
+  public getPathLessOrEqual(path: number): LinkedLeaf {
     // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
     let largestLeaf = this.getLeaf(0n) as LinkedLeaf;
     while (largestLeaf.nextPath < path) {
