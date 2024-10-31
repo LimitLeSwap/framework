@@ -321,7 +321,7 @@ export function createLinkedMerkleTree(
       }
     }
 
-    public setLeafInitialisation() {
+    private setLeafInitialisation() {
       const MAX_FIELD_VALUE = 2 ** 1000000;
       this.store.setLeaf(0n, {
         value: 0n,
