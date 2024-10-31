@@ -58,7 +58,7 @@ export interface AbstractLinkedMerkleTree {
    * @param path of the leaf node.
    * @param value New value.
    */
-  setLeaf(path: number, value: bigint): void;
+  setValue(path: number, value: bigint): void;
 
   /**
    * Returns a leaf which lives at a given path.
@@ -259,69 +259,57 @@ export function createLinkedMerkleTree(
     }
 
     /**
-     * Sets the value of a leaf node at a given path to a given value.
-     * @param path Position of the leaf node.
-     * @param value New value.
+     * Sets the value of a leaf node at a given index to a given value.
+     * @param index Position of the leaf node.
+     * @param leaf New value.
      */
-    public setLeaf(path: number, value: bigint) {
+    private setLeaf(index: bigint, leaf: LinkedLeaf) {
+      this.setNode(
+        0,
+        index,
+        Poseidon.hash([leaf.value, leaf.path, leaf.nextPath])
+      );
+      let tempIndex = index;
+      for (
+        let level = 1;
+        level < AbstractLinkedRollupMerkleTree.HEIGHT;
+        level += 1
+      ) {
+        tempIndex /= 2n;
+        const leftPrev = this.getNode(level - 1, tempIndex * 2n);
+        const rightPrev = this.getNode(level - 1, tempIndex * 2n + 1n);
+        this.setNode(level, tempIndex, Poseidon.hash([leftPrev, rightPrev]));
+      }
+    }
+
+    public setValue(path: number, value: bigint) {
       const prevLeaf = this.store.getPathLessOrEqual(path);
       // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-      let prevLeafIndex = this.store.getLeafIndex(path) as bigint;
+      const prevLeafIndex = this.store.getLeafIndex(path) as bigint;
       const newPrevLeaf = {
         value: prevLeaf.value,
         path: prevLeaf.path,
         nextPath: path,
       };
       this.store.setLeaf(prevLeafIndex, newPrevLeaf);
-      const prevLeafFields = this.getLeaf(prevLeaf.path);
-      this.setNode(
-        0,
-        prevLeafIndex,
-        Poseidon.hash([
-          prevLeafFields.value,
-          prevLeafFields.path,
-          prevLeafFields.nextPath,
-        ])
-      );
+      this.setLeaf(prevLeafIndex, {
+        value: Field(newPrevLeaf.value),
+        path: Field(newPrevLeaf.path),
+        nextPath: Field(newPrevLeaf.nextPath),
+      });
 
       const newLeaf = {
         value: value,
         path: path,
         nextPath: prevLeaf.nextPath,
       };
-      let newLeafIndex = this.store.getMaximumIndex() + 1n;
+      const newLeafIndex = this.store.getMaximumIndex() + 1n;
       this.store.setLeaf(newLeafIndex, newLeaf);
-      const newLeafFields = this.getLeaf(path);
-      this.setNode(
-        0,
-        newLeafIndex,
-        Poseidon.hash([
-          newLeafFields.value,
-          newLeafFields.path,
-          newLeafFields.nextPath,
-        ])
-      );
-
-      for (
-        let level = 1;
-        level < AbstractLinkedRollupMerkleTree.HEIGHT;
-        level += 1
-      ) {
-        prevLeafIndex /= 2n;
-        newLeafIndex /= 2n;
-
-        const leftPrev = this.getNode(level - 1, prevLeafIndex * 2n);
-        const rightPrev = this.getNode(level - 1, prevLeafIndex * 2n + 1n);
-        const leftNew = this.getNode(level - 1, newLeafIndex * 2n);
-        const rightNew = this.getNode(level - 1, newLeafIndex * 2n + 1n);
-
-        this.setNode(
-          level,
-          prevLeafIndex,
-          Poseidon.hash([leftPrev, rightPrev])
-        );
-        this.setNode(level, prevLeafIndex, Poseidon.hash([leftNew, rightNew]));
-      }
+      this.setLeaf(newLeafIndex, {
+        value: Field(newLeaf.value),
+        path: Field(newLeaf.path),
+        nextPath: Field(newLeaf.nextPath),
+      });
     }
 
     /**
