@@ -180,17 +180,24 @@ export function createLinkedMerkleTree(
 
     public static WITNESS = LinkedMerkleWitness;
 
+    readonly zeroes: bigint[];
+
     readonly store: LinkedMerkleTreeStore;
 
     public constructor(store: LinkedMerkleTreeStore) {
       this.store = store;
-      this.store.setLeaf(0n, { value: 0n, path: 0, nextPath: 0 });
-      const baseLeaf = this.getLeaf(0);
-      this.setNode(
-        0,
-        0n,
-        Poseidon.hash([baseLeaf.value, baseLeaf.path, baseLeaf.nextPath])
-      );
+      this.zeroes = [0n];
+      for (
+        let index = 1;
+        index < AbstractLinkedRollupMerkleTree.HEIGHT;
+        index += 1
+      ) {
+        const previousLevel = Field(this.zeroes[index - 1]);
+        this.zeroes.push(
+          Poseidon.hash([previousLevel, previousLevel]).toBigInt()
+        );
+      }
+      this.setLeafInitialisation();
     }
 
     public getNode(level: number, index: bigint): Field {
@@ -311,6 +318,35 @@ export function createLinkedMerkleTree(
           Poseidon.hash([leftPrev, rightPrev])
         );
         this.setNode(level, prevLeafIndex, Poseidon.hash([leftNew, rightNew]));
+      }
+    }
+
+    public setLeafInitialisation() {
+      const MAX_FIELD_VALUE = 2 ** 1000000;
+      this.store.setLeaf(0n, {
+        value: 0n,
+        path: 0,
+        nextPath: MAX_FIELD_VALUE,
+      });
+      const initialLeaf = this.getLeaf(0);
+      this.setNode(
+        0,
+        0n,
+        Poseidon.hash([
+          initialLeaf.value,
+          initialLeaf.path,
+          initialLeaf.nextPath,
+        ])
+      );
+      for (
+        let level = 1;
+        level < AbstractLinkedRollupMerkleTree.HEIGHT;
+        level += 1
+      ) {
+        const leftNode = this.getNode(level - 1, 0n);
+        const rightNode = this.getNode(level - 1, 1n);
+
+        this.setNode(level, 0n, Poseidon.hash([leftNode, rightNode]));
       }
     }
 

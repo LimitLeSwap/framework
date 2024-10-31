@@ -9,7 +9,7 @@ export class InMemoryLinkedMerkleTreeStorage implements LinkedMerkleTreeStore {
 
   protected leaves: {
     [key: string]: LinkedLeaf;
-  } = { "0": { value: 0n, path: 0, nextPath: 0 } };
+  } = {};
 
   public getNode(index: bigint, level: number): bigint | undefined {
     return this.nodes[level]?.[index.toString()];
