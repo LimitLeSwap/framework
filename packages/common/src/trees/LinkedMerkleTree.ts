@@ -229,7 +229,10 @@ export function createLinkedMerkleTree(
       };
     }
 
-    // This gets the leaf with the closest path.
+    /**
+     * Returns the leaf with a path either equal to or less than the path specified.
+     * @param path Position of the leaf node.
+     * */
     public getClosestPath(path: number): LinkedLeaf {
       const closestLeaf = this.store.getClosestPath(path);
       return {
