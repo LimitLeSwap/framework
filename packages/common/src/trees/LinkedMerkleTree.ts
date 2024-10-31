@@ -202,10 +202,7 @@ export function createLinkedMerkleTree(
 
     public getNode(level: number, index: bigint): Field {
       const node = this.store.getNode(index, level);
-      if (node === undefined) {
-        throw new Error("Path does not exist in tree.");
-      }
-      return Field(node);
+      return Field(node ?? this.zeroes[level]);
     }
 
     /**
@@ -282,30 +279,39 @@ export function createLinkedMerkleTree(
       }
     }
 
+    /**
+     * Sets the value of a node at a given index to a given value.
+     * @param path Position of the leaf node.
+     * @param value New value.
+     */
     public setValue(path: number, value: bigint) {
+      let index = this.store.getLeafIndex(path);
       const prevLeaf = this.store.getPathLessOrEqual(path);
-      // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-      const prevLeafIndex = this.store.getLeafIndex(path) as bigint;
-      const newPrevLeaf = {
-        value: prevLeaf.value,
-        path: prevLeaf.path,
-        nextPath: path,
-      };
-      this.store.setLeaf(prevLeafIndex, newPrevLeaf);
-      this.setLeaf(prevLeafIndex, {
-        value: Field(newPrevLeaf.value),
-        path: Field(newPrevLeaf.path),
-        nextPath: Field(newPrevLeaf.nextPath),
-      });
-
+      if (index === undefined) {
+        // The above means the path doesn't already exist and we are inserting, not updating.
+        // This requires us to update the node with the previous path, as well.
+        // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+        const prevLeafIndex = this.store.getLeafIndex(prevLeaf.path) as bigint;
+        const newPrevLeaf = {
+          value: prevLeaf.value,
+          path: prevLeaf.path,
+          nextPath: path,
+        };
+        this.store.setLeaf(prevLeafIndex, newPrevLeaf);
+        this.setLeaf(prevLeafIndex, {
+          value: Field(newPrevLeaf.value),
+          path: Field(newPrevLeaf.path),
+          nextPath: Field(newPrevLeaf.nextPath),
+        });
+        index = this.store.getMaximumIndex() + 1n;
+      }
       const newLeaf = {
         value: value,
         path: path,
         nextPath: prevLeaf.nextPath,
       };
-      const newLeafIndex = this.store.getMaximumIndex() + 1n;
-      this.store.setLeaf(newLeafIndex, newLeaf);
-      this.setLeaf(newLeafIndex, {
+      this.store.setLeaf(index, newLeaf);
+      this.setLeaf(index, {
         value: Field(newLeaf.value),
         path: Field(newLeaf.path),
         nextPath: Field(newLeaf.nextPath),
@@ -324,25 +330,7 @@ export function createLinkedMerkleTree(
         nextPath: MAX_FIELD_VALUE,
       });
       const initialLeaf = this.getLeaf(0);
-      this.setNode(
-        0,
-        0n,
-        Poseidon.hash([
-          initialLeaf.value,
-          initialLeaf.path,
-          initialLeaf.nextPath,
-        ])
-      );
-      for (
-        let level = 1;
-        level < AbstractLinkedRollupMerkleTree.HEIGHT;
-        level += 1
-      ) {
-        const leftNode = this.getNode(level - 1, 0n);
-        const rightNode = this.getNode(level - 1, 1n);
-
-        this.setNode(level, 0n, Poseidon.hash([leftNode, rightNode]));
-      }
+      this.setLeaf(0n, initialLeaf);
     }
 
     /**
