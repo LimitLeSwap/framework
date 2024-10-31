@@ -12,6 +12,7 @@ import {
   ReturnType,
   SettlementContractModule,
   Subclass,
+  CompileRegistry,
 } from "@proto-kit/protocol";
 import {
   addCachedAccount,
@@ -30,7 +31,6 @@ import {
   ProofTaskSerializer,
   DynamicProofTaskSerializer,
 } from "../../helpers/utils";
-import { CompileRegistry } from "../../protocol/production/helpers/CompileRegistry";
 import { Task, TaskSerializer } from "../../worker/flow/Task";
 import { TaskWorkerModule } from "../../worker/worker/TaskWorkerModule";
 
@@ -373,8 +373,6 @@ export class SettlementProvingTask
       return;
     }
 
-    const { areProofsEnabled } = this.areProofsEnabled;
-
     const contractClasses: Record<string, typeof SmartContract> = {};
 
     for (const key of this.settlementContractModule.moduleNames) {
@@ -387,11 +385,7 @@ export class SettlementProvingTask
       contractClasses[key] = module.contractFactory();
 
       // eslint-disable-next-line no-await-in-loop
-      await this.compileRegistry.compileSmartContract(
-        key,
-        module,
-        areProofsEnabled
-      );
+      await module.compile(this.compileRegistry);
     }
 
     this.contractRegistry = new ContractRegistry(contractClasses);

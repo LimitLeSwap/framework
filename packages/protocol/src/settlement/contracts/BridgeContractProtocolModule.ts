@@ -7,6 +7,7 @@ import {
   BridgeContractBase,
   BridgeContractType,
 } from "./BridgeContract";
+import { CompileRegistry } from "../../utils/CompileRegistry";
 
 export type BridgeContractConfig = {
   withdrawalStatePath: `${string}.${string}`;
@@ -34,8 +35,8 @@ export class BridgeContractProtocolModule extends ContractModule<
     return BridgeContract;
   }
 
-  public async compile() {
-    const bridgeVK = await BridgeContract.compile();
+  public async compile(registry: CompileRegistry) {
+    const bridgeVK = await registry.compileSmartContract(BridgeContract);
     return {
       BridgeContract: bridgeVK,
     };

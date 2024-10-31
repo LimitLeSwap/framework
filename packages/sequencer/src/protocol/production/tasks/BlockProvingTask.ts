@@ -14,6 +14,7 @@ import {
   StateTransitionProvable,
   VKTreeWitness,
   DynamicRuntimeProof,
+  CompileRegistry,
 } from "@proto-kit/protocol";
 import { Field, Proof } from "o1js";
 import { Runtime } from "@proto-kit/module";
@@ -32,7 +33,6 @@ import { TaskWorkerModule } from "../../../worker/worker/TaskWorkerModule";
 import { TaskStateRecord } from "../TransactionTraceService";
 import { VerificationKeyService } from "../../runtime/RuntimeVerificationKeyService";
 import { VerificationKeySerializer } from "../helpers/VerificationKeySerializer";
-import { CompileRegistry } from "../helpers/CompileRegistry";
 
 import { JSONEncodableState } from "./RuntimeTaskParameters";
 
@@ -135,7 +135,6 @@ export class BlockReductionTask
 
   public async prepare(): Promise<void> {
     await this.compileRegistry.compile(
-      "BlockProver",
       this.blockProver.zkProgrammable.zkProgram[0]
     );
   }
@@ -306,7 +305,6 @@ export class BlockProvingTask
   public async prepare(): Promise<void> {
     // Compile
     await this.compileRegistry.compile(
-      "BlockProver",
       this.blockProver.zkProgrammable.zkProgram[0]
     );
   }

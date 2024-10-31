@@ -18,6 +18,7 @@ import {
 import { BridgeContractBase } from "./BridgeContract";
 import { DispatchContractProtocolModule } from "./DispatchContractProtocolModule";
 import { BridgeContractProtocolModule } from "./BridgeContractProtocolModule";
+import { CompileRegistry } from "../../utils/CompileRegistry";
 
 export type SettlementContractConfig = {
   escapeHatchSlotsInterval?: number;
@@ -74,8 +75,12 @@ export class SettlementContractProtocolModule extends ContractModule<
     return SettlementSmartContract;
   }
 
-  public async compile(): Promise<Record<string, CompileArtifact>> {
-    const settlementVK = await SettlementSmartContract.compile();
+  public async compile(
+    registry: CompileRegistry
+  ): Promise<Record<string, CompileArtifact | undefined>> {
+    const settlementVK = await registry.compileSmartContract(
+      SettlementSmartContract
+    );
     return {
       SettlementContract: settlementVK,
     };

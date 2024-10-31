@@ -227,9 +227,10 @@ export class RuntimeZkProgrammable<
       return buckets;
     };
 
-    return splitRuntimeMethods().map((bucket) => {
+    return splitRuntimeMethods().map((bucket, index) => {
+      const name = `RuntimeProgram-${index}`;
       const program = ZkProgram({
-        name: "RuntimeProgram",
+        name,
         publicOutput: MethodPublicOutput,
         methods: bucket,
       });
@@ -245,6 +246,7 @@ export class RuntimeZkProgrammable<
       );
 
       return {
+        name,
         compile: program.compile.bind(program),
         verify: program.verify.bind(program),
         analyzeMethods: program.analyzeMethods.bind(program),

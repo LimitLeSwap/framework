@@ -6,6 +6,8 @@ import {
 } from "@proto-kit/common";
 import { SmartContract } from "o1js";
 
+import type { CompileRegistry } from "../utils/CompileRegistry";
+
 export type SmartContractClassFromInterface<Type> = typeof SmartContract &
   TypedClass<Type>;
 
@@ -23,5 +25,7 @@ export abstract class ContractModule<
 > extends ConfigurableModule<Config> {
   public abstract contractFactory(): SmartContractClassFromInterface<ContractType>;
 
-  public abstract compile(): Promise<Record<string, CompileArtifact>>;
+  public abstract compile(
+    registry: CompileRegistry
+  ): Promise<Record<string, CompileArtifact | undefined>>;
 }

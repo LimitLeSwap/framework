@@ -32,6 +32,7 @@ export interface Compile {
 }
 
 export interface PlainZkProgram<PublicInput = undefined, PublicOutput = void> {
+  name: string;
   compile: Compile;
   verify: Verify<PublicInput, PublicOutput>;
   Proof: ReturnType<
