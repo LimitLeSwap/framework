@@ -2,11 +2,11 @@ import {
   AreProofsEnabled,
   PlainZkProgram,
   provableMethod,
-  RollupMerkleTreeWitness,
   ZkProgrammable,
 } from "@proto-kit/common";
 import { Field, Provable, SelfProof, ZkProgram } from "o1js";
 import { injectable } from "tsyringe";
+import { LinkedMerkleTreeWitness } from "@proto-kit/common/dist/trees/LinkedMerkleTree";
 
 import { constants } from "../../Constants";
 import { ProvableStateTransition } from "../../model/StateTransition";
@@ -189,7 +189,7 @@ export class StateTransitionProverProgrammable extends ZkProgrammable<
     type: ProvableStateTransitionType,
     index = 0
   ) {
-    const witness = Provable.witness(RollupMerkleTreeWitness, () =>
+    const witness = Provable.witness(LinkedMerkleTreeWitness, () =>
       this.witnessProvider.getWitness(transition.path)
     );
 
