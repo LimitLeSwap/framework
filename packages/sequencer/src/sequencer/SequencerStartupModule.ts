@@ -1,16 +1,20 @@
 import { inject } from "tsyringe";
 import {
   ArtifactRecord,
+  CompileRegistry,
   MandatoryProtocolModulesRecord,
   Protocol,
   RuntimeVerificationKeyRootService,
   SettlementSmartContractBase,
 } from "@proto-kit/protocol";
-import { log } from "@proto-kit/common";
+import { CompileArtifact, log } from "@proto-kit/common";
 
-import { FlowCreator } from "../worker/flow/Flow";
+import { Flow, FlowCreator } from "../worker/flow/Flow";
 import { WorkerRegistrationFlow } from "../worker/worker/startup/WorkerRegistrationFlow";
-import { CircuitCompilerTask } from "../protocol/production/tasks/CircuitCompilerTask";
+import {
+  CircuitCompilerTask,
+  CompilerTaskParams,
+} from "../protocol/production/tasks/CircuitCompilerTask";
 import { VerificationKeyService } from "../protocol/runtime/RuntimeVerificationKeyService";
 
 import { SequencerModule, sequencerModule } from "./builder/SequencerModule";
@@ -23,27 +27,29 @@ export class SequencerStartupModule extends SequencerModule {
     private readonly protocol: Protocol<MandatoryProtocolModulesRecord>,
     private readonly compileTask: CircuitCompilerTask,
     private readonly verificationKeyService: VerificationKeyService,
-    private readonly registrationFlow: WorkerRegistrationFlow
+    private readonly registrationFlow: WorkerRegistrationFlow,
+    private readonly compileRegistry: CompileRegistry
   ) {
     super();
   }
 
-  public async start() {
-    const flow = this.flowCreator.createFlow("compile-circuits", {});
-
-    log.info("Compiling Protocol circuits, this can take a few minutes");
-
-    const artifacts = await flow.withFlow<ArtifactRecord>(async (res, rej) => {
-      await flow.pushTask(
-        this.compileTask,
-        { existingArtifacts: {}, targets: ["runtime"] },
-        async (result) => {
-          res(result);
-        }
-      );
+  private async pushCompileTask(
+    flow: Flow<{}>,
+    payload: CompilerTaskParams
+  ): Promise<ArtifactRecord> {
+    return await flow.withFlow<ArtifactRecord>(async (res, rej) => {
+      await flow.pushTask(this.compileTask, payload, async (result) => {
+        res(result);
+      });
     });
+  }
 
-    log.info("Protocol circuits compiled");
+  public async compileRuntime(flow: Flow<{}>) {
+    const artifacts = await this.pushCompileTask(flow, {
+      existingArtifacts: {},
+      targets: ["runtime"],
+      runtimeVKRoot: undefined,
+    });
 
     // Init runtime VK tree
     await this.verificationKeyService.initializeVKTree(artifacts);
@@ -54,16 +60,81 @@ export class SequencerStartupModule extends SequencerModule {
       .resolve(RuntimeVerificationKeyRootService)
       .setRoot(root);
 
+    this.compileRegistry.addArtifactsRaw(artifacts);
+
+    return root;
+  }
+
+  private async compileProtocolAndBridge(flow: Flow<{}>) {
+    // Can happen in parallel
+    type ParallelResult = {
+      protocol?: ArtifactRecord;
+      bridge?: ArtifactRecord;
+    };
+    const result = await flow.withFlow<ArtifactRecord>(async (res, rej) => {
+      const results: ParallelResult = {};
+
+      const resolveIfPossible = () => {
+        const { bridge, protocol } = results;
+        if (bridge !== undefined && protocol !== undefined) {
+          res({ ...protocol, ...bridge });
+        }
+      };
+
+      await flow.pushTask(
+        this.compileTask,
+        {
+          existingArtifacts: {},
+          targets: ["protocol"],
+          runtimeVKRoot: undefined,
+        },
+        async (result) => {
+          results.protocol = result;
+          resolveIfPossible();
+        }
+      );
+
+      await flow.pushTask(
+        this.compileTask,
+        {
+          existingArtifacts: {},
+          targets: ["bridge"],
+          runtimeVKRoot: undefined,
+        },
+        async (result) => {
+          results.bridge = result;
+          resolveIfPossible();
+        }
+      );
+    });
+    this.compileRegistry.addArtifactsRaw(result);
+    return result;
+  }
+
+  public async start() {
+    const flow = this.flowCreator.createFlow("compile-circuits", {});
+
+    log.info("Compiling Protocol circuits, this can take a few minutes");
+
+    const root = await this.compileRuntime(flow);
+
+    const protocolBridgeArtifacts = await this.compileProtocolAndBridge(flow);
+
+    log.info("Protocol circuits compiled");
+
     // Init BridgeContract vk for settlement contract
-    const bridgeVk = artifacts.BridgeContract;
+    const bridgeVk = protocolBridgeArtifacts.BridgeContract;
     if (bridgeVk !== undefined) {
       SettlementSmartContractBase.args.BridgeContractVerificationKey =
         bridgeVk.verificationKey;
     }
 
+    // TODO Add vk record to start params
+
     await this.registrationFlow.start({
       runtimeVerificationKeyRoot: root,
-      bridgeContractVerificationKey: bridgeVk.verificationKey,
+      bridgeContractVerificationKey: bridgeVk?.verificationKey,
+      compiledArtifacts: this.compileRegistry.getAllArtifacts(),
     });
 
     log.info("Protocol circuits compiled successfully, commencing startup");

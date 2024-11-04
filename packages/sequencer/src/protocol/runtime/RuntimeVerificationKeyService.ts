@@ -93,7 +93,7 @@ export class VerificationKeyService extends ConfigurableModule<{}> {
     );
   }
 
-  public async initializeVKTreeFromMethodMappings(verificationKeys: VKRecord) {
+  private async initializeVKTreeFromMethodMappings(verificationKeys: VKRecord) {
     const tree = new VKTree(new InMemoryMerkleTreeStorage());
     const valuesVK: Record<string, { data: string; hash: Field }> = {};
     const indexes: VKIndexes = {};

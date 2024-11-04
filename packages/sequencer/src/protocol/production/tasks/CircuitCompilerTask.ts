@@ -9,6 +9,7 @@ import {
   CompileRegistry,
   CompilableModule,
   BridgeContractProtocolModule,
+  RuntimeVerificationKeyRootService,
 } from "@proto-kit/protocol";
 
 import { TaskSerializer } from "../../../worker/flow/Task";
@@ -18,6 +19,7 @@ import { VerificationKeySerializer } from "../helpers/VerificationKeySerializer"
 export type CompilerTaskParams = {
   existingArtifacts: ArtifactRecord;
   targets: string[];
+  runtimeVKRoot?: string;
 };
 
 type SerializedArtifactRecord = Record<
@@ -117,6 +119,14 @@ export class CircuitCompilerTask extends UnpreparingTask<
   public async compute(input: CompilerTaskParams): Promise<ArtifactRecord> {
     this.compileRegistry.addArtifactsRaw(input.existingArtifacts);
 
+    // We need to initialize the VK tree root if we have it, so that
+    // the BlockProver can bake in that root
+    if (input.runtimeVKRoot !== undefined) {
+      this.protocol.dependencyContainer
+        .resolve(RuntimeVerificationKeyRootService)
+        .setRoot(BigInt(input.runtimeVKRoot));
+    }
+
     log.info("Computing VKs");
 
     // TODO make adaptive
@@ -132,7 +142,10 @@ export class CircuitCompilerTask extends UnpreparingTask<
       if (target in targets) {
         await targets[target].compile(this.compileRegistry);
       } else {
-        throw new Error(`Compile target ${target} not found`);
+        log.info(
+          // TODO Is that right? Or should we check that the bridge exists on the sequencer side?
+          `Compile target ${target} not found, skipping`
+        );
       }
     });
     log.timeEnd.info(msg);

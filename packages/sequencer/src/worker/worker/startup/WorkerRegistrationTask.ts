@@ -1,6 +1,9 @@
 import { log, noop } from "@proto-kit/common";
 import { inject, injectable } from "tsyringe";
 import {
+  ArtifactRecord,
+  ChildVerificationKeyService,
+  CompileRegistry,
   Protocol,
   RuntimeVerificationKeyRootService,
   SettlementSmartContractBase,
@@ -12,11 +15,13 @@ import { AbstractStartupTask } from "../../flow/AbstractStartupTask";
 import { VerificationKeySerializer } from "../../../protocol/production/helpers/VerificationKeySerializer";
 
 import { CloseWorkerError } from "./CloseWorkerError";
+import { ArtifactRecordSerializer } from "../../../protocol/production/tasks/CircuitCompilerTask";
 
 export type WorkerStartupPayload = {
   runtimeVerificationKeyRoot: bigint;
   // This has to be nullable, since
   bridgeContractVerificationKey?: VerificationKey;
+  compiledArtifacts: ArtifactRecord;
 };
 
 @injectable()
@@ -28,7 +33,8 @@ export class WorkerRegistrationTask
   private done = false;
 
   public constructor(
-    @inject("Protocol") private readonly protocol: Protocol<any>
+    @inject("Protocol") private readonly protocol: Protocol<any>,
+    private readonly compileRegistry: CompileRegistry
   ) {
     super();
   }
@@ -55,6 +61,11 @@ export class WorkerRegistrationTask
         input.bridgeContractVerificationKey;
     }
 
+    this.compileRegistry.addArtifactsRaw(input.compiledArtifacts);
+    this.protocol.dependencyContainer
+      .resolve(ChildVerificationKeyService)
+      .setCompileRegistry(this.compileRegistry);
+
     this.events.emit("startup-task-finished");
 
     this.done = true;
@@ -62,6 +73,7 @@ export class WorkerRegistrationTask
   }
 
   public inputSerializer() {
+    const artifactSerializer = new ArtifactRecordSerializer();
     return {
       toJSON: (payload: WorkerStartupPayload) => {
         return JSON.stringify({
@@ -73,6 +85,9 @@ export class WorkerRegistrationTask
                   payload.bridgeContractVerificationKey
                 )
               : undefined,
+          compiledArtifacts: artifactSerializer.toJSON(
+            payload.compiledArtifacts
+          ),
         });
       },
       fromJSON: (payload: string) => {
@@ -91,6 +106,9 @@ export class WorkerRegistrationTask
                   jsonObject.bridgeContractVerificationKey
                 )
               : undefined,
+          compiledArtifacts: artifactSerializer.fromJSON(
+            jsonObject.compiledArtifacts
+          ),
         };
       },
     };
