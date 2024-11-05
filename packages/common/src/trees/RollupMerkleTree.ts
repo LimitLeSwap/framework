@@ -16,7 +16,7 @@ export interface AbstractMerkleWitness extends StructTemplate {
 
   /**
    * Calculates a root depending on the leaf value.
-   * @param leaf Value of the leaf node that belongs to this Witness.
+   * @param hash Value of the leaf node that belongs to this Witness.
    * @returns The calculated root.
    */
   calculateRoot(hash: Field): Field;
@@ -94,6 +94,96 @@ export interface AbstractMerkleTreeClass {
   get leafCount(): bigint;
 }
 
+const HEIGHT: number = 40;
+/**
+ * The {@link RollupMerkleWitness} class defines a circuit-compatible base class
+ * for [Merkle Witness'](https://computersciencewiki.org/index.php/Merkle_proof).
+ */
+class RollupMerkleWitness
+  extends Struct({
+    path: Provable.Array(Field, HEIGHT - 1),
+    isLeft: Provable.Array(Bool, HEIGHT - 1),
+  })
+  implements AbstractMerkleWitness
+{
+  public static height = HEIGHT;
+
+  public height(): number {
+    return RollupMerkleWitness.height;
+  }
+
+  /**
+   * Calculates a root depending on the leaf value.
+   * @param leaf Value of the leaf node that belongs to this Witness.
+   * @returns The calculated root.
+   */
+  public calculateRoot(leaf: Field): Field {
+    let hash = leaf;
+    const n = this.height();
+
+    for (let index = 1; index < n; ++index) {
+      const isLeft = this.isLeft[index - 1];
+      // eslint-disable-next-line @typescript-eslint/no-use-before-define
+      const [left, right] = maybeSwap(isLeft, hash, this.path[index - 1]);
+      hash = Poseidon.hash([left, right]);
+    }
+
+    return hash;
+  }
+
+  /**
+   * Calculates the index of the leaf node that belongs to this Witness.
+   * @returns Index of the leaf.
+   */
+  public calculateIndex(): Field {
+    let powerOfTwo = Field(1);
+    let index = Field(0);
+    const n = this.height();
+
+    for (let i = 1; i < n; ++i) {
+      index = Provable.if(this.isLeft[i - 1], index, index.add(powerOfTwo));
+      powerOfTwo = powerOfTwo.mul(2);
+    }
+
+    return index;
+  }
+
+  public checkMembership(root: Field, key: Field, value: Field): Bool {
+    const calculatedRoot = this.calculateRoot(value);
+    const calculatedKey = this.calculateIndex();
+    // We don't have to range-check the key, because if it would be greater
+    // than leafCount, it would not match the computedKey
+    key.assertEquals(calculatedKey, "Keys of MerkleWitness does not match");
+    return root.equals(calculatedRoot);
+  }
+
+  public checkMembershipGetRoots(
+    root: Field,
+    key: Field,
+    value: Field
+  ): [Bool, Field, Field] {
+    const calculatedRoot = this.calculateRoot(value);
+    const calculatedKey = this.calculateIndex();
+    key.assertEquals(calculatedKey, "Keys of MerkleWitness does not match");
+    return [root.equals(calculatedRoot), root, calculatedRoot];
+  }
+
+  public toShortenedEntries() {
+    return range(0, 5)
+      .concat(range(this.height() - 4, this.height()))
+      .map((index) =>
+        [this.path[index].toString(), this.isLeft[index].toString()].toString()
+      );
+  }
+
+  public static dummy() {
+    return new RollupMerkleWitness({
+      isLeft: Array<Bool>(this.height - 1).fill(Bool(false)),
+      path: Array<Field>(this.height - 1).fill(Field(0)),
+    });
+  }
+}
+
 /**
  * A [Merkle Tree](https://en.wikipedia.org/wiki/Merkle_tree) is a binary tree in
  * which every leaf is the cryptography hash of a piece of data,
@@ -114,98 +204,6 @@ export interface AbstractMerkleTreeClass {
  * It also holds the Witness class under tree.WITNESS
  */
 export function createMerkleTree(height: number): AbstractMerkleTreeClass {
-  /**
-   * The {@link BaseMerkleWitness} class defines a circuit-compatible base class
-   * for [Merkle Witness'](https://computersciencewiki.org/index.php/Merkle_proof).
-   */
-  class RollupMerkleWitness
-    extends Struct({
-      path: Provable.Array(Field, height - 1),
-      isLeft: Provable.Array(Bool, height - 1),
-    })
-    implements AbstractMerkleWitness
-  {
-    public static height = height;
-
-    public height(): number {
-      return RollupMerkleWitness.height;
-    }
-
-    /**
-     * Calculates a root depending on the leaf value.
-     * @param leaf Value of the leaf node that belongs to this Witness.
-     * @returns The calculated root.
-     */
-    public calculateRoot(leaf: Field): Field {
-      let hash = leaf;
-      const n = this.height();
-
-      for (let index = 1; index < n; ++index) {
-        const isLeft = this.isLeft[index - 1];
-        // eslint-disable-next-line @typescript-eslint/no-use-before-define
-        const [left, right] = maybeSwap(isLeft, hash, this.path[index - 1]);
-        hash = Poseidon.hash([left, right]);
-      }
-
-      return hash;
-    }
-
-    /**
-     * Calculates the index of the leaf node that belongs to this Witness.
-     * @returns Index of the leaf.
-     */
-    public calculateIndex(): Field {
-      let powerOfTwo = Field(1);
-      let index = Field(0);
-      const n = this.height();
-
-      for (let i = 1; i < n; ++i) {
-        index = Provable.if(this.isLeft[i - 1], index, index.add(powerOfTwo));
-        powerOfTwo = powerOfTwo.mul(2);
-      }
-
-      return index;
-    }
-
-    public checkMembership(root: Field, key: Field, value: Field): Bool {
-      const calculatedRoot = this.calculateRoot(value);
-      const calculatedKey = this.calculateIndex();
-      // We don't have to range-check the key, because if it would be greater
-      // than leafCount, it would not match the computedKey
-      key.assertEquals(calculatedKey, "Keys of MerkleWitness does not match");
-      return root.equals(calculatedRoot);
-    }
-
-    public checkMembershipGetRoots(
-      root: Field,
-      key: Field,
-      value: Field
-    ): [Bool, Field, Field] {
-      const calculatedRoot = this.calculateRoot(value);
-      const calculatedKey = this.calculateIndex();
-      key.assertEquals(calculatedKey, "Keys of MerkleWitness does not match");
-      return [root.equals(calculatedRoot), root, calculatedRoot];
-    }
-
-    public toShortenedEntries() {
-      return range(0, 5)
-        .concat(range(this.height() - 4, this.height()))
-        .map((index) =>
-          [
-            this.path[index].toString(),
-            this.isLeft[index].toString(),
-          ].toString()
-        );
-    }
-
-    public static dummy() {
-      return new RollupMerkleWitness({
-        isLeft: Array<Bool>(height - 1).fill(Bool(false)),
-        path: Array<Field>(height - 1).fill(Field(0)),
-      });
-    }
-  }
-
   return class AbstractRollupMerkleTree implements AbstractMerkleTree {
     public static HEIGHT = height;
 
