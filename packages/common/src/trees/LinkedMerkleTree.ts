@@ -74,10 +74,7 @@ export function createLinkedMerkleTree(
   height: number
 ): AbstractLinkedMerkleTreeClass {
   class LinkedMerkleWitness
-    extends Struct({
-      leaf: LinkedLeaf,
-      merkleWitness: RollupMerkleTreeWitness,
-    })
+    extends LinkedStructTemplate
     implements AbstractLinkedMerkleWitness {}
 
   return class AbstractLinkedRollupMerkleTree
