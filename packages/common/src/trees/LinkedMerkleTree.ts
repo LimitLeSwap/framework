@@ -15,6 +15,7 @@ class LinkedLeaf extends Struct({
 export class LinkedStructTemplate extends Struct({
   leaf: LinkedLeaf,
   merkleWitness: RollupMerkleTreeWitness,
+  nextFreeIndex: Field,
 }) {}
 
 export interface AbstractLinkedMerkleWitness extends LinkedStructTemplate {}
@@ -267,6 +268,7 @@ export function createLinkedMerkleTree(
           isLeft: isLefts,
         }),
         leaf: leaf,
+        nextFreeIndex: Field(this.store.getMaximumIndex() + 1n),
       });
     }
   };

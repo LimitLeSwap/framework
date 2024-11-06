@@ -22,6 +22,7 @@ export class NoOpStateTransitionWitnessProvider
     return new LinkedMerkleTreeWitness({
       merkleWitness: new RollupMerkleTreeWitness({ path: [], isLeft: [] }),
       leaf: { value: Field(0), path: Field(0), nextPath: Field(0) },
+      nextFreeIndex: Field(1),
     });
   }
 }

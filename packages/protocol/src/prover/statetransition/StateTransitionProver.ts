@@ -4,7 +4,7 @@ import {
   provableMethod,
   ZkProgrammable,
 } from "@proto-kit/common";
-import { Bool, Field, Provable, SelfProof, ZkProgram } from "o1js";
+import { Bool, Field, Poseidon, Provable, SelfProof, ZkProgram } from "o1js";
 import { injectable } from "tsyringe";
 import { LinkedMerkleTreeWitness } from "@proto-kit/common/dist/trees/LinkedMerkleTree";
 
@@ -204,22 +204,34 @@ export class StateTransitionProverProgrammable extends ZkProgrammable<
 
     checkLeafValue.assertTrue();
 
-    const membershipValid = witness.merkleWitness.checkMembership(
+    const membershipValid = witness.merkleWitness.checkMembershipSimple(
       state.stateRoot,
-      transition.path,
-      transition.from.value
+      Poseidon.hash([
+        transition.from.value,
+        transition.path,
+        witness.leaf.nextPath,
+      ])
     );
 
-    membershipValid
-      .or(transition.from.isSome.not())
-      .assertTrue(
-        errors.merkleWitnessNotCorrect(
-          index,
-          type.isNormal().toBoolean() ? "normal" : "protocol"
-        )
-      );
+    membershipValid.assertTrue(
+      errors.merkleWitnessNotCorrect(
+        index,
+        type.isNormal().toBoolean() ? "normal" : "protocol"
+      )
+    );
+
+    // Now for inserting. This requires changing the leaf before and inserting a new leaf.
+    // The new leaf requires a new witness.
+    const oldRoot = witness.merkleWitness.calculateRoot(
+      Poseidon.hash([witness.leaf.value, witness.leaf.path, transition.path])
+    );
+
+    const newWitness = Provable.witness(LinkedMerkleTreeWitness, () =>
+      this.witnessProvider.getWitness(transition.path)
+    );
 
     const newRoot = witness.merkleWitness.calculateRoot(transition.to.value);
+    // const newRoot = witness.merkleWitness.calculateRoot(transition.to.value);
 
     // LEAVE AS IS for below Linked Merkle Tree
 

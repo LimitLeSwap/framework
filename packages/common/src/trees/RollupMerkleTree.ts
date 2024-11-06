@@ -29,6 +29,8 @@ export interface AbstractMerkleWitness extends StructTemplate {
 
   checkMembership(root: Field, key: Field, value: Field): Bool;
 
+  checkMembershipSimple(root: Field, value: Field): Bool;
+
   checkMembershipGetRoots(
     root: Field,
     key: Field,
@@ -154,6 +156,11 @@ class RollupMerkleWitness
     // We don't have to range-check the key, because if it would be greater
     // than leafCount, it would not match the computedKey
     key.assertEquals(calculatedKey, "Keys of MerkleWitness does not match");
+    return root.equals(calculatedRoot);
+  }
+
+  public checkMembershipSimple(root: Field, value: Field): Bool {
+    const calculatedRoot = this.calculateRoot(value);
     return root.equals(calculatedRoot);
   }
 
