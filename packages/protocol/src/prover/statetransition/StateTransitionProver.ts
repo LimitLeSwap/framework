@@ -197,8 +197,9 @@ export class StateTransitionProverProgrammable extends ZkProgrammable<
       transition.from.isSome,
       Bool,
       witness.leaf.path.equals(transition.path),
-      witness.leaf.path.lessThan(transition.path) &&
-        witness.leaf.nextPath.greaterThan(transition.path)
+      witness.leaf.path
+        .lessThan(transition.path)
+        .and(witness.leaf.nextPath.greaterThan(transition.path))
     );
 
     checkLeafValue.assertTrue();
