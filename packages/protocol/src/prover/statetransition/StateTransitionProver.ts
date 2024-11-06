@@ -4,7 +4,7 @@ import {
   provableMethod,
   ZkProgrammable,
 } from "@proto-kit/common";
-import { Field, Provable, SelfProof, ZkProgram } from "o1js";
+import { Bool, Field, Provable, SelfProof, ZkProgram } from "o1js";
 import { injectable } from "tsyringe";
 import { LinkedMerkleTreeWitness } from "@proto-kit/common/dist/trees/LinkedMerkleTree";
 
@@ -193,7 +193,17 @@ export class StateTransitionProverProgrammable extends ZkProgrammable<
       this.witnessProvider.getWitness(transition.path)
     );
 
-    const membershipValid = witness.checkMembership(
+    const checkLeafValue = Provable.if(
+      transition.from.isSome,
+      Bool,
+      witness.leaf.path.equals(transition.path),
+      witness.leaf.path.lessThan(transition.path) &&
+        witness.leaf.nextPath.greaterThan(transition.path)
+    );
+
+    checkLeafValue.assertTrue();
+
+    const membershipValid = witness.merkleWitness.checkMembership(
       state.stateRoot,
       transition.path,
       transition.from.value
@@ -208,7 +218,9 @@ export class StateTransitionProverProgrammable extends ZkProgrammable<
         )
       );
 
-    const newRoot = witness.calculateRoot(transition.to.value);
+    const newRoot = witness.merkleWitness.calculateRoot(transition.to.value);
+
+    // LEAVE AS IS for below Linked Merkle Tree
 
     state.stateRoot = Provable.if(
       transition.to.isSome,
