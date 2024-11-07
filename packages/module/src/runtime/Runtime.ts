@@ -11,13 +11,13 @@ import {
   PlainZkProgram,
   AreProofsEnabled,
   ChildContainerProvider,
+  CompilableModule,
+  CompileRegistry,
 } from "@proto-kit/common";
 import {
   MethodPublicOutput,
   StateServiceProvider,
   SimpleAsyncStateService,
-  CompilableModule,
-  CompileRegistry,
   RuntimeMethodExecutionContext,
   RuntimeTransaction,
   NetworkState,
@@ -384,14 +384,12 @@ export class Runtime<Modules extends RuntimeModulesRecord>
   }
 
   public async compile(registry: CompileRegistry) {
-    return await registry.compileModule(async () => {
-      const context = container.resolve(RuntimeMethodExecutionContext);
-      context.setup({
-        transaction: RuntimeTransaction.dummyTransaction(),
-        networkState: NetworkState.empty(),
-      });
-      return await this.zkProgrammable.compile();
+    const context = container.resolve(RuntimeMethodExecutionContext);
+    context.setup({
+      transaction: RuntimeTransaction.dummyTransaction(),
+      networkState: NetworkState.empty(),
     });
+    return await this.zkProgrammable.compile(registry);
   }
 }
 /* eslint-enable @typescript-eslint/no-unsafe-assignment,@typescript-eslint/no-unsafe-argument */

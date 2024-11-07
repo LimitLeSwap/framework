@@ -4,6 +4,9 @@ import {
   provableMethod,
   RollupMerkleTreeWitness,
   ZkProgrammable,
+  CompilableModule,
+  type ArtifactRecord,
+  type CompileRegistry,
 } from "@proto-kit/common";
 import { Field, Provable, SelfProof, ZkProgram } from "o1js";
 import { injectable } from "tsyringe";
@@ -29,9 +32,6 @@ import {
 } from "./StateTransitionProvable";
 import { StateTransitionWitnessProvider } from "./StateTransitionWitnessProvider";
 import { StateTransitionWitnessProviderReference } from "./StateTransitionWitnessProviderReference";
-import { CompilableModule } from "../../compiling/CompilableModule";
-import { ArtifactRecord } from "../../compiling/AtomicCompileHelper";
-import { CompileRegistry } from "../../compiling/CompileRegistry";
 
 const errors = {
   propertyNotMatching: (property: string, step: string) =>
@@ -367,10 +367,10 @@ export class StateTransitionProver
     );
   }
 
-  public compile(registry: CompileRegistry): Promise<void | ArtifactRecord> {
-    return registry.compileModule(
-      async () => await this.zkProgrammable.compile()
-    );
+  public async compile(
+    registry: CompileRegistry
+  ): Promise<void | ArtifactRecord> {
+    return await this.zkProgrammable.compile(registry);
   }
 
   public runBatch(

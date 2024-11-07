@@ -14,12 +14,14 @@ import {
   StateTransitionProvable,
   VKTreeWitness,
   DynamicRuntimeProof,
-  CompileRegistry,
 } from "@proto-kit/protocol";
 import { Field, Proof } from "o1js";
 import { Runtime } from "@proto-kit/module";
 import { inject, injectable, Lifecycle, scoped } from "tsyringe";
-import { ProvableMethodExecutionContext } from "@proto-kit/common";
+import {
+  ProvableMethodExecutionContext,
+  CompileRegistry,
+} from "@proto-kit/common";
 
 import {
   PairProofTaskSerializer,

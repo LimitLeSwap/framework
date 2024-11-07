@@ -1,13 +1,12 @@
 import {
-  CompileArtifact,
+  ArtifactRecord,
+  type CompilableModule,
+  CompileRegistry,
   ConfigurableModule,
   NoConfig,
   TypedClass,
 } from "@proto-kit/common";
 import { SmartContract } from "o1js";
-import { CompilableModule } from "../compiling/CompilableModule";
-import type { CompileRegistry } from "../compiling/CompileRegistry";
-import { ArtifactRecord } from "../compiling/AtomicCompileHelper";
 
 export type SmartContractClassFromInterface<Type> = typeof SmartContract &
   TypedClass<Type>;

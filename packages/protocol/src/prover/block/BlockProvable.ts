@@ -7,7 +7,7 @@ import {
   Struct,
   Void,
 } from "o1js";
-import { WithZkProgrammable } from "@proto-kit/common";
+import { WithZkProgrammable, CompilableModule } from "@proto-kit/common";
 
 import { StateTransitionProof } from "../statetransition/StateTransitionProvable";
 import { MethodPublicOutput } from "../../model/MethodPublicOutput";
@@ -16,7 +16,6 @@ import { NetworkState } from "../../model/network/NetworkState";
 
 import { BlockHashMerkleTreeWitness } from "./accummulators/BlockHashMerkleTree";
 import { RuntimeVerificationKeyAttestation } from "./accummulators/RuntimeVerificationKeyTree";
-import { CompilableModule } from "../../compiling/CompilableModule";
 
 export class BlockProverPublicInput extends Struct({
   transactionsHash: Field,

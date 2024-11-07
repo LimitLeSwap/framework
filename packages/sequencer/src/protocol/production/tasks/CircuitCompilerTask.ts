@@ -1,14 +1,17 @@
 import { inject, injectable, Lifecycle, scoped } from "tsyringe";
 import { Runtime } from "@proto-kit/module";
-import { log, mapSequential } from "@proto-kit/common";
+import {
+  log,
+  mapSequential,
+  StringKeyOf,
+  ArtifactRecord,
+  CompileRegistry,
+  CompilableModule,
+} from "@proto-kit/common";
 import {
   MandatorySettlementModulesRecord,
   Protocol,
   SettlementContractModule,
-  ArtifactRecord,
-  CompileRegistry,
-  CompilableModule,
-  BridgeContractProtocolModule,
   RuntimeVerificationKeyRootService,
 } from "@proto-kit/protocol";
 
@@ -55,6 +58,8 @@ export class ArtifactRecordSerializer {
   }
 
   public fromJSON(json: SerializedArtifactRecord): ArtifactRecord {
+    if (json === undefined || json === null) return {};
+
     return Object.keys(json).reduce<ArtifactRecord>((accum, key) => {
       return {
         ...accum,
@@ -85,7 +90,23 @@ export class CircuitCompilerTask extends UnpreparingTask<
   }
 
   public inputSerializer(): TaskSerializer<CompilerTaskParams> {
-    return new SimpleJSONSerializer<CompilerTaskParams>();
+    const serializer = new ArtifactRecordSerializer();
+    return {
+      toJSON: (input) =>
+        JSON.stringify({
+          targets: input.targets,
+          root: input.runtimeVKRoot,
+          existingArtifacts: serializer.toJSON(input.existingArtifacts),
+        }),
+      fromJSON: (input) => {
+        const json = JSON.parse(input);
+        return {
+          targets: json.targets,
+          root: json.runtimeVKRoot,
+          existingArtifacts: serializer.fromJSON(json.existingArtifacts),
+        };
+      },
+    };
   }
 
   public resultSerializer(): TaskSerializer<ArtifactRecord> {
@@ -105,13 +126,20 @@ export class CircuitCompilerTask extends UnpreparingTask<
         SettlementContractModule<MandatorySettlementModulesRecord>
       >("SettlementContractModule");
 
-      const bridge = settlementModule.resolveOrFail(
-        "BridgeContract",
-        BridgeContractProtocolModule
-      );
-      return {
-        bridge,
-      };
+      // Needed so that all contractFactory functions are called, because
+      // they set static args on the contracts
+      settlementModule.getContractClasses();
+
+      const moduleNames =
+        // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+        settlementModule.moduleNames as StringKeyOf<MandatorySettlementModulesRecord>[];
+
+      const modules = moduleNames.map((name) => [
+        `Settlement.${name}`,
+        settlementModule.resolve(name),
+      ]);
+
+      return Object.fromEntries(modules);
     }
     return {};
   }
@@ -136,7 +164,7 @@ export class CircuitCompilerTask extends UnpreparingTask<
       ...this.getSettlementTargets(),
     };
 
-    const msg = `Compiling targets ${targets}`;
+    const msg = `Compiling targets [${input.targets}]`;
     log.time(msg);
     await mapSequential(input.targets, async (target) => {
       if (target in targets) {
@@ -150,6 +178,9 @@ export class CircuitCompilerTask extends UnpreparingTask<
     });
     log.timeEnd.info(msg);
 
-    return this.compileRegistry.getAllArtifacts();
+    const newEntries = Object.entries(
+      this.compileRegistry.getAllArtifacts()
+    ).filter(([key]) => !(key in input.existingArtifacts));
+    return Object.fromEntries(newEntries);
   }
 }

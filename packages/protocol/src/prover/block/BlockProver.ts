@@ -12,7 +12,9 @@ import {
 import { container, inject, injectable, injectAll } from "tsyringe";
 import {
   AreProofsEnabled,
+  CompilableModule,
   CompileArtifact,
+  CompileRegistry,
   PlainZkProgram,
   provableMethod,
   WithZkProgrammable,
@@ -24,6 +26,7 @@ import { MethodPublicOutput } from "../../model/MethodPublicOutput";
 import { ProtocolModule } from "../../protocol/ProtocolModule";
 import {
   StateTransitionProof,
+  StateTransitionProvable,
   StateTransitionProverPublicInput,
   StateTransitionProverPublicOutput,
 } from "../statetransition/StateTransitionProvable";
@@ -42,7 +45,6 @@ import {
   MinaActionsHashList,
 } from "../../utils/MinaPrefixedProvableHashList";
 import { StateTransitionReductionList } from "../../utils/StateTransitionReductionList";
-import { CompileRegistry } from "../../compiling/CompileRegistry";
 
 import {
   BlockProvable,
@@ -62,7 +64,6 @@ import {
   RuntimeVerificationKeyAttestation,
 } from "./accummulators/RuntimeVerificationKeyTree";
 import { RuntimeVerificationKeyRootService } from "./services/RuntimeVerificationKeyRootService";
-import { CompilableModule } from "../../compiling/CompilableModule";
 
 const errors = {
   stateProofNotStartingAtZero: () =>
@@ -905,9 +906,11 @@ export class BlockProver
     public readonly stateTransitionProver: WithZkProgrammable<
       StateTransitionProverPublicInput,
       StateTransitionProverPublicOutput
-    >,
+    > &
+      StateTransitionProvable,
     @inject("Runtime")
-    public readonly runtime: WithZkProgrammable<undefined, MethodPublicOutput>,
+    public readonly runtime: WithZkProgrammable<undefined, MethodPublicOutput> &
+      CompilableModule,
     @injectAll("ProvableTransactionHook")
     transactionHooks: ProvableTransactionHook<unknown>[],
     @injectAll("ProvableBlockHook")
@@ -928,9 +931,10 @@ export class BlockProver
   public async compile(
     registry: CompileRegistry
   ): Promise<Record<string, CompileArtifact> | undefined> {
-    return await registry.compileModule(
-      async () => await this.zkProgrammable.compile()
-    );
+    await this.stateTransitionProver.compile(registry);
+    await this.runtime.compile(registry);
+
+    return await this.zkProgrammable.compile(registry);
   }
 
   public proveTransaction(

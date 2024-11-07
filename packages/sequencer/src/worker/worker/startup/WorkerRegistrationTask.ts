@@ -1,9 +1,12 @@
-import { log, noop } from "@proto-kit/common";
-import { inject, injectable } from "tsyringe";
 import {
+  log,
+  noop,
   ArtifactRecord,
   ChildVerificationKeyService,
   CompileRegistry,
+} from "@proto-kit/common";
+import { inject, injectable } from "tsyringe";
+import {
   Protocol,
   RuntimeVerificationKeyRootService,
   SettlementSmartContractBase,
@@ -13,9 +16,9 @@ import { VerificationKey } from "o1js";
 import { Task } from "../../flow/Task";
 import { AbstractStartupTask } from "../../flow/AbstractStartupTask";
 import { VerificationKeySerializer } from "../../../protocol/production/helpers/VerificationKeySerializer";
+import { ArtifactRecordSerializer } from "../../../protocol/production/tasks/CircuitCompilerTask";
 
 import { CloseWorkerError } from "./CloseWorkerError";
-import { ArtifactRecordSerializer } from "../../../protocol/production/tasks/CircuitCompilerTask";
 
 export type WorkerStartupPayload = {
   runtimeVerificationKeyRoot: bigint;
@@ -106,7 +109,9 @@ export class WorkerRegistrationTask
                   jsonObject.bridgeContractVerificationKey
                 )
               : undefined,
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
           compiledArtifacts: artifactSerializer.fromJSON(
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
             jsonObject.compiledArtifacts
           ),
         };

@@ -5,11 +5,11 @@ import {
   Runtime,
 } from "@proto-kit/module";
 import {
-  CompileRegistry,
   MethodPublicOutput,
   RuntimeMethodExecutionContext,
 } from "@proto-kit/protocol";
 import { Proof } from "o1js";
+import { CompileRegistry } from "@proto-kit/common";
 
 import { Task, TaskSerializer } from "../../../worker/flow/Task";
 import { ProofTaskSerializer } from "../../../helpers/utils";

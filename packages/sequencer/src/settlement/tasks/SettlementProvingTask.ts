@@ -3,16 +3,15 @@ import {
   MOCK_PROOF,
   AreProofsEnabled,
   log,
+  CompileRegistry,
 } from "@proto-kit/common";
 import {
-  ContractModule,
   MandatoryProtocolModulesRecord,
   MandatorySettlementModulesRecord,
   Protocol,
   ReturnType,
   SettlementContractModule,
   Subclass,
-  CompileRegistry,
 } from "@proto-kit/protocol";
 import {
   addCachedAccount,
@@ -368,24 +367,42 @@ export class SettlementProvingTask
   }
 
   public async prepare(): Promise<void> {
+    const { settlementContractModule } = this;
     // Guard in case the task is configured but settlement is not
-    if (this.settlementContractModule === undefined) {
-      return;
+    if (settlementContractModule === undefined) {
+      throw new Error(
+        "Settlement task is configured, but Settlement Contracts aren't"
+      );
     }
 
     const contractClasses: Record<string, typeof SmartContract> = {};
 
-    for (const key of this.settlementContractModule.moduleNames) {
-      const module: ContractModule<unknown, unknown> =
-        this.settlementContractModule.resolve(
-          // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-          key as keyof MandatorySettlementModulesRecord
-        );
+    const modules = settlementContractModule.moduleNames.map(
+      (key) =>
+        [
+          key,
+          settlementContractModule.resolve(
+            // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+            key as keyof MandatorySettlementModulesRecord
+          ),
+        ] as const
+    );
 
+    // First, create all contract classes (with static args), then compile them
+    for (const [key, module] of modules) {
       contractClasses[key] = module.contractFactory();
+    }
 
-      // eslint-disable-next-line no-await-in-loop
-      await module.compile(this.compileRegistry);
+    try {
+      for (const [key, module] of modules) {
+        log.debug(`Compiling Settlement Module ${key}`);
+
+        // eslint-disable-next-line no-await-in-loop
+        await module.compile(this.compileRegistry);
+      }
+    } catch (e) {
+      console.error(e);
+      throw e;
     }
 
     this.contractRegistry = new ContractRegistry(contractClasses);

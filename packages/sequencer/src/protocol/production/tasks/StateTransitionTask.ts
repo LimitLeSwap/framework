@@ -8,9 +8,12 @@ import {
   StateTransitionProvableBatch,
   StateTransitionProverPublicInput,
   StateTransitionProverPublicOutput,
-  CompileRegistry,
 } from "@proto-kit/protocol";
-import { log, ProvableMethodExecutionContext } from "@proto-kit/common";
+import {
+  log,
+  ProvableMethodExecutionContext,
+  CompileRegistry,
+} from "@proto-kit/common";
 
 import { Task, TaskSerializer } from "../../../worker/flow/Task";
 import {

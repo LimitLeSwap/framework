@@ -4,6 +4,7 @@ import { Memoize } from "typescript-memoize";
 import { log } from "../log";
 import { dummyVerificationKey } from "../dummyVerificationKey";
 import { reduceSequential } from "../utils";
+import type { CompileRegistry } from "../compiling/CompileRegistry";
 
 import { MOCK_PROOF } from "./provableMethod";
 
@@ -74,8 +75,6 @@ export function verifyToMockable<PublicInput, PublicOutput>(
       return verified;
     }
 
-    console.log("VerifyMocked");
-
     return proof.proof === MOCK_PROOF;
   };
 }
@@ -128,11 +127,11 @@ export abstract class ZkProgrammable<
     });
   }
 
-  public async compile() {
+  public async compile(registry: CompileRegistry) {
     return await reduceSequential(
       this.zkProgram,
       async (acc, program) => {
-        const result = await program.compile();
+        const result = await registry.compile(program);
         return {
           ...acc,
           [program.name]: result,

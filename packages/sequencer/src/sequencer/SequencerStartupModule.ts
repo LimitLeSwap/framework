@@ -1,13 +1,16 @@
 import { inject } from "tsyringe";
 import {
-  ArtifactRecord,
-  CompileRegistry,
   MandatoryProtocolModulesRecord,
   Protocol,
   RuntimeVerificationKeyRootService,
   SettlementSmartContractBase,
 } from "@proto-kit/protocol";
-import { CompileArtifact, log } from "@proto-kit/common";
+import {
+  log,
+  ArtifactRecord,
+  ChildVerificationKeyService,
+  CompileRegistry,
+} from "@proto-kit/common";
 
 import { Flow, FlowCreator } from "../worker/flow/Flow";
 import { WorkerRegistrationFlow } from "../worker/worker/startup/WorkerRegistrationFlow";
@@ -98,7 +101,7 @@ export class SequencerStartupModule extends SequencerModule {
         this.compileTask,
         {
           existingArtifacts: {},
-          targets: ["bridge"],
+          targets: ["Settlement.BridgeContract"],
           runtimeVKRoot: undefined,
         },
         async (result) => {
@@ -113,6 +116,10 @@ export class SequencerStartupModule extends SequencerModule {
 
   public async start() {
     const flow = this.flowCreator.createFlow("compile-circuits", {});
+
+    this.protocol.dependencyContainer
+      .resolve(ChildVerificationKeyService)
+      .setCompileRegistry(this.compileRegistry);
 
     log.info("Compiling Protocol circuits, this can take a few minutes");
 
@@ -129,7 +136,12 @@ export class SequencerStartupModule extends SequencerModule {
         bridgeVk.verificationKey;
     }
 
-    // TODO Add vk record to start params
+    const record = await this.pushCompileTask(flow, {
+      existingArtifacts: this.compileRegistry.getAllArtifacts(),
+      targets: ["Settlement.SettlementContract"],
+    });
+
+    this.compileRegistry.addArtifactsRaw(record);
 
     await this.registrationFlow.start({
       runtimeVerificationKeyRoot: root,
