@@ -393,16 +393,11 @@ export class SettlementProvingTask
       contractClasses[key] = module.contractFactory();
     }
 
-    try {
-      for (const [key, module] of modules) {
-        log.debug(`Compiling Settlement Module ${key}`);
+    for (const [key, module] of modules) {
+      log.debug(`Compiling Settlement Module ${key}`);
 
-        // eslint-disable-next-line no-await-in-loop
-        await module.compile(this.compileRegistry);
-      }
-    } catch (e) {
-      console.error(e);
-      throw e;
+      // eslint-disable-next-line no-await-in-loop
+      await module.compile(this.compileRegistry);
     }
 
     this.contractRegistry = new ContractRegistry(contractClasses);

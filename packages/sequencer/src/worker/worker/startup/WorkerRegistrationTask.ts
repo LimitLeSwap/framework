@@ -4,6 +4,7 @@ import {
   ArtifactRecord,
   ChildVerificationKeyService,
   CompileRegistry,
+  safeParseJson,
 } from "@proto-kit/common";
 import { inject, injectable } from "tsyringe";
 import {
@@ -15,8 +16,14 @@ import { VerificationKey } from "o1js";
 
 import { Task } from "../../flow/Task";
 import { AbstractStartupTask } from "../../flow/AbstractStartupTask";
-import { VerificationKeySerializer } from "../../../protocol/production/helpers/VerificationKeySerializer";
-import { ArtifactRecordSerializer } from "../../../protocol/production/tasks/CircuitCompilerTask";
+import {
+  VerificationKeyJSON,
+  VerificationKeySerializer,
+} from "../../../protocol/production/helpers/VerificationKeySerializer";
+import {
+  ArtifactRecordSerializer,
+  SerializedArtifactRecord,
+} from "../../../protocol/production/tasks/CircuitCompilerTask";
 
 import { CloseWorkerError } from "./CloseWorkerError";
 
@@ -76,6 +83,12 @@ export class WorkerRegistrationTask
   }
 
   public inputSerializer() {
+    type WorkerStartupPayloadJSON = {
+      runtimeVerificationKeyRoot: string;
+      bridgeContractVerificationKey: VerificationKeyJSON | undefined;
+      compiledArtifacts: SerializedArtifactRecord;
+    };
+
     const artifactSerializer = new ArtifactRecordSerializer();
     return {
       toJSON: (payload: WorkerStartupPayload) => {
@@ -91,27 +104,22 @@ export class WorkerRegistrationTask
           compiledArtifacts: artifactSerializer.toJSON(
             payload.compiledArtifacts
           ),
-        });
+        } satisfies WorkerStartupPayloadJSON);
       },
       fromJSON: (payload: string) => {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-        const jsonObject = JSON.parse(payload);
+        const jsonObject = safeParseJson<WorkerStartupPayloadJSON>(payload);
 
         return {
           runtimeVerificationKeyRoot: BigInt(
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
             jsonObject.runtimeVerificationKeyRoot
           ),
           bridgeContractVerificationKey:
             jsonObject.bridgeContractVerificationKey !== undefined
               ? VerificationKeySerializer.fromJSON(
-                  // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
                   jsonObject.bridgeContractVerificationKey
                 )
               : undefined,
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
           compiledArtifacts: artifactSerializer.fromJSON(
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
             jsonObject.compiledArtifacts
           ),
         };

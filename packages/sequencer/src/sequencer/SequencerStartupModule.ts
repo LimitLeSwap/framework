@@ -91,8 +91,8 @@ export class SequencerStartupModule extends SequencerModule {
           targets: ["protocol"],
           runtimeVKRoot: undefined,
         },
-        async (result) => {
-          results.protocol = result;
+        async (protocolResult) => {
+          results.protocol = protocolResult;
           resolveIfPossible();
         }
       );
@@ -104,8 +104,8 @@ export class SequencerStartupModule extends SequencerModule {
           targets: ["Settlement.BridgeContract"],
           runtimeVKRoot: undefined,
         },
-        async (result) => {
-          results.bridge = result;
+        async (bridgeResult) => {
+          results.bridge = bridgeResult;
           resolveIfPossible();
         }
       );
@@ -142,6 +142,9 @@ export class SequencerStartupModule extends SequencerModule {
     });
 
     this.compileRegistry.addArtifactsRaw(record);
+
+    // TODO Compile all contracts and retrieve artifacts to enable crafting of
+    //  the deployments - edit: can also be done on-demand with the CompileTask
 
     await this.registrationFlow.start({
       runtimeVerificationKeyRoot: root,

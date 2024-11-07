@@ -18,15 +18,9 @@ import {
 import { VanillaProtocolModules } from "@proto-kit/library";
 import { AppChain, InMemoryAreProofsEnabled } from "@proto-kit/sdk";
 import { container } from "tsyringe";
-import { PrivateKey, UInt64, VerificationKey } from "o1js";
+import { PrivateKey, UInt64 } from "o1js";
 
 import { testingSequencerFromModules } from "../TestingSequencer";
-
-import { ProtocolStateTestHook } from "./mocks/ProtocolStateTestHook";
-import { BlockTestService } from "./services/BlockTestService";
-import { ProvenBalance } from "./mocks/ProvenBalance";
-import { FungibleTokenContractModule } from "../../src/settlement/utils/FungibleTokenContractModule";
-import { FungibleTokenAdminContractModule } from "../../src/settlement/utils/FungibleTokenAdminContractModule";
 import {
   MinaBaseLayer,
   ProvenSettlementPermissions,
@@ -34,6 +28,10 @@ import {
   SettlementProvingTask,
   WithdrawalQueue,
 } from "../../src";
+
+import { ProtocolStateTestHook } from "./mocks/ProtocolStateTestHook";
+import { BlockTestService } from "./services/BlockTestService";
+import { ProvenBalance } from "./mocks/ProvenBalance";
 
 const timeout = 300000;
 

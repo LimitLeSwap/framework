@@ -182,3 +182,9 @@ export function isSubtypeOfName(
   // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
   return isSubtypeOfName(Object.getPrototypeOf(clas), name);
 }
+
+// TODO Eventually, replace this by a schema validation library
+export function safeParseJson<T>(json: string) {
+  // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+  return JSON.parse(json) as T;
+}

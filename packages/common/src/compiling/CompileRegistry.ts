@@ -41,8 +41,6 @@ export class CompileRegistry {
 
   private artifacts: ArtifactRecord = {};
 
-  // private cachedModuleOutputs: Record<string, ArtifactRecord | void> = {};
-
   // TODO Add possibility to force recompilation for non-sideloaded dependencies
 
   public async compile(target: CompileTarget) {
@@ -53,47 +51,6 @@ export class CompileRegistry {
     }
     return this.artifacts[target.name];
   }
-
-  // public async compileModule<
-  //   ReturnType extends ArtifactRecord,
-  //   Dependencies extends Record<string, CompilableModule>,
-  // >(
-  //   compile: (
-  //     compiler: AtomicCompileHelper,
-  //     args: InferDependencyArtifacts<Dependencies>
-  //   ) => Promise<ReturnType>,
-  //   dependencies?: Dependencies
-  // ): Promise<ReturnType | undefined> {
-  //   const collectedArtifacts = await mapSequential(
-  //     Object.entries(dependencies ?? {}),
-  //     async ([depName, dep]) => {
-  //       if (this.cachedModuleOutputs[depName] !== undefined) {
-  //         return [depName, this.cachedModuleOutputs[depName]];
-  //       }
-  //       const artifact = await dep.compile(this);
-  //       if (artifact !== undefined) {
-  //         this.artifacts = {
-  //           ...this.artifacts,
-  //           ...artifact,
-  //         };
-  //       }
-  //       this.cachedModuleOutputs[depName] = artifact;
-  //       return [depName, artifact];
-  //     }
-  //   );
-  //
-  //   const artifacts = await compile(
-  //     this.compile,
-  //     Object.fromEntries(collectedArtifacts)
-  //   );
-  //
-  //   this.artifacts = {
-  //     ...this.artifacts,
-  //     ...artifacts,
-  //   };
-  //
-  //   return artifacts;
-  // }
 
   public getArtifact(name: string) {
     if (this.artifacts[name] === undefined) {

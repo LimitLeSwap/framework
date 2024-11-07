@@ -7,6 +7,7 @@ import {
   ArtifactRecord,
   CompileRegistry,
   CompilableModule,
+  safeParseJson,
 } from "@proto-kit/common";
 import {
   MandatorySettlementModulesRecord,
@@ -25,20 +26,10 @@ export type CompilerTaskParams = {
   runtimeVKRoot?: string;
 };
 
-type SerializedArtifactRecord = Record<
+export type SerializedArtifactRecord = Record<
   string,
   { verificationKey: { hash: string; data: string } }
 >;
-
-export class SimpleJSONSerializer<Type> implements TaskSerializer<Type> {
-  public toJSON(parameters: Type): string {
-    return JSON.stringify(parameters);
-  }
-
-  public fromJSON(json: string): Type {
-    return JSON.parse(json) as Type;
-  }
-}
 
 export class ArtifactRecordSerializer {
   public toJSON(input: ArtifactRecord): SerializedArtifactRecord {
@@ -69,7 +60,7 @@ export class ArtifactRecordSerializer {
           ),
         },
       };
-    }, {} as ArtifactRecord);
+    }, {});
   }
 }
 
@@ -90,19 +81,25 @@ export class CircuitCompilerTask extends UnpreparingTask<
   }
 
   public inputSerializer(): TaskSerializer<CompilerTaskParams> {
+    type CompilerTaskParamsJSON = {
+      targets: string[];
+      runtimeVKRoot?: string;
+      existingArtifacts: SerializedArtifactRecord;
+    };
+
     const serializer = new ArtifactRecordSerializer();
     return {
       toJSON: (input) =>
         JSON.stringify({
           targets: input.targets,
-          root: input.runtimeVKRoot,
+          runtimeVKRoot: input.runtimeVKRoot,
           existingArtifacts: serializer.toJSON(input.existingArtifacts),
-        }),
+        } satisfies CompilerTaskParamsJSON),
       fromJSON: (input) => {
-        const json = JSON.parse(input);
+        const json = safeParseJson<CompilerTaskParamsJSON>(input);
         return {
           targets: json.targets,
-          root: json.runtimeVKRoot,
+          runtimeVKRoot: json.runtimeVKRoot,
           existingArtifacts: serializer.fromJSON(json.existingArtifacts),
         };
       },
@@ -113,7 +110,8 @@ export class CircuitCompilerTask extends UnpreparingTask<
     const serializer = new ArtifactRecordSerializer();
     return {
       toJSON: (input) => JSON.stringify(serializer.toJSON(input)),
-      fromJSON: (input) => serializer.fromJSON(JSON.parse(input)),
+      fromJSON: (input) =>
+        serializer.fromJSON(safeParseJson<SerializedArtifactRecord>(input)),
     };
   }
 
