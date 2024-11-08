@@ -85,7 +85,6 @@ export class StateTransitionProverProgrammable extends ZkProgrammable<
       publicInput: StateTransitionProverPublicInput,
       publicOutput: StateTransitionProverPublicOutput,
 
-      // Add in argument for StateTransitionTaskParameters
       methods: {
         proveBatch: {
           privateInputs: [StateTransitionProvableBatch],

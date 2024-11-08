@@ -1,5 +1,5 @@
 import { Bool, Provable, Struct } from "o1js";
-import { range } from "@proto-kit/common";
+import { range, RollupMerkleTreeWitness } from "@proto-kit/common";
 
 import { constants } from "../Constants";
 
@@ -60,15 +60,22 @@ export class StateTransitionProvableBatch extends Struct({
     ProvableStateTransitionType,
     constants.stateTransitionProverBatchSize
   ),
+
+  merkleWitnesses: Provable.Array(
+    RollupMerkleTreeWitness,
+    constants.stateTransitionProverBatchSize
+  ),
 }) {
   public static fromMappings(
     transitions: {
       transition: ProvableStateTransition;
       type: ProvableStateTransitionType;
+      merkleWitnesses: RollupMerkleTreeWitness;
     }[]
   ): StateTransitionProvableBatch {
     const batch = transitions.map((entry) => entry.transition);
     const transitionTypes = transitions.map((entry) => entry.type);
+    const merkleWitnesses = transitions.map((entry) => entry.merkleWitnesses);
 
     // Check that order is correct
     let normalSTsStarted = false;
@@ -88,12 +95,14 @@ export class StateTransitionProvableBatch extends Struct({
     return new StateTransitionProvableBatch({
       batch,
       transitionTypes,
+      merkleWitnesses,
     });
   }
 
   public static fromTransitions(
     transitions: ProvableStateTransition[],
-    protocolTransitions: ProvableStateTransition[]
+    protocolTransitions: ProvableStateTransition[],
+    merkleWitnesses: RollupMerkleTreeWitness[]
   ): StateTransitionProvableBatch {
     const array = transitions.slice().concat(protocolTransitions);
 
@@ -113,12 +122,14 @@ export class StateTransitionProvableBatch extends Struct({
     return new StateTransitionProvableBatch({
       batch: array,
       transitionTypes,
+      merkleWitnesses,
     });
   }
 
   private constructor(object: {
     batch: ProvableStateTransition[];
     transitionTypes: ProvableStateTransitionType[];
+    merkleWitnesses: RollupMerkleTreeWitness[];
   }) {
     super(object);
   }
