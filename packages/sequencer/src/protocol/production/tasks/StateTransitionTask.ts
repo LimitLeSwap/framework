@@ -68,6 +68,7 @@ export class StateTransitionTask
     witnessProviderReference.setWitnessProvider(witnessProvider);
 
     const stBatch = input.stateTransitions.slice();
+    const merkleWitnesses = input.merkleWitnesses.slice();
     // Array.from({
     //   length: ProtocolConstants.stateTransitionProverBatchSize - stBatch.length,
     // }).forEach(() => {
@@ -78,7 +79,7 @@ export class StateTransitionTask
 
     const output = await this.stateTransitionProver.runBatch(
       input.publicInput,
-      StateTransitionProvableBatch.fromMappings(stBatch)
+      StateTransitionProvableBatch.fromMappings(stBatch, merkleWitnesses)
     );
     log.debug("STTask public io:", {
       input: StateTransitionProverPublicInput.toJSON(input.publicInput),

@@ -70,12 +70,11 @@ export class StateTransitionProvableBatch extends Struct({
     transitions: {
       transition: ProvableStateTransition;
       type: ProvableStateTransitionType;
-      merkleWitnesses: RollupMerkleTreeWitness;
-    }[]
+    }[],
+    merkleWitnesses: RollupMerkleTreeWitness[]
   ): StateTransitionProvableBatch {
     const batch = transitions.map((entry) => entry.transition);
     const transitionTypes = transitions.map((entry) => entry.type);
-    const merkleWitnesses = transitions.map((entry) => entry.merkleWitnesses);
 
     // Check that order is correct
     let normalSTsStarted = false;
