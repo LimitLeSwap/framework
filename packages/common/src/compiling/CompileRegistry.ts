@@ -7,21 +7,7 @@ import {
   AtomicCompileHelper,
   CompileTarget,
 } from "./AtomicCompileHelper";
-import { CompilableModule } from "./CompilableModule";
 
-interface GenericCompilableModule<Artifact> {
-  compile(registry: CompileRegistry): Promise<Artifact>;
-}
-
-export type InferDependencyArtifacts<
-  Dependencies extends Record<string, CompilableModule>,
-> = {
-  [Key in keyof Dependencies]: Dependencies[Key] extends GenericCompilableModule<
-    infer Artifact
-  >
-    ? Artifact
-    : void;
-};
 /**
  * The CompileRegistry compiles "compilable modules"
  * (i.e. zkprograms, contracts or contractmodules)
