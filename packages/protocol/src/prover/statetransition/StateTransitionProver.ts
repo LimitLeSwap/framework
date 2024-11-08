@@ -27,7 +27,6 @@ import {
   StateTransitionProverPublicInput,
   StateTransitionProverPublicOutput,
 } from "./StateTransitionProvable";
-import { StateTransitionWitnessProvider } from "./StateTransitionWitnessProvider";
 import { StateTransitionWitnessProviderReference } from "./StateTransitionWitnessProviderReference";
 
 const errors = {
@@ -132,14 +131,6 @@ export class StateTransitionProverProgrammable extends ZkProgrammable<
     ];
   }
 
-  private get witnessProvider(): StateTransitionWitnessProvider {
-    const provider = this.witnessProviderReference.getWitnessProvider();
-    if (provider === undefined) {
-      throw errors.noWitnessProviderSet();
-    }
-    return provider;
-  }
-
   /**
    * Applies the state transitions to the current stateRoot
    * and returns the new prover state
@@ -168,12 +159,19 @@ export class StateTransitionProverProgrammable extends ZkProgrammable<
 
     const transitions = transitionBatch.batch;
     const types = transitionBatch.transitionTypes;
+    const merkleWitness = transitionBatch.merkleWitnesses;
     for (
       let index = 0;
       index < constants.stateTransitionProverBatchSize;
       index++
     ) {
-      this.applyTransition(state, transitions[index], types[index], index);
+      this.applyTransition(
+        state,
+        transitions[index],
+        types[index],
+        merkleWitness[index],
+        index
+      );
     }
 
     return state;
@@ -187,12 +185,9 @@ export class StateTransitionProverProgrammable extends ZkProgrammable<
     state: StateTransitionProverExecutionState,
     transition: ProvableStateTransition,
     type: ProvableStateTransitionType,
+    witness: RollupMerkleTreeWitness,
     index = 0
   ) {
-    const witness = Provable.witness(RollupMerkleTreeWitness, () =>
-      this.witnessProvider.getWitness(transition.path)
-    );
-
     const membershipValid = witness.checkMembership(
       state.stateRoot,
       transition.path,
