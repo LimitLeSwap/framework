@@ -93,12 +93,9 @@ export class PrivateMempool extends SequencerModule implements Mempool {
     return result?.result.afterNetworkState;
   }
 
-  public async getTxs(): Promise<PendingTransaction[]> {
+  public async getTxs(limit?: number): Promise<PendingTransaction[]> {
     const txs = await this.transactionStorage.getPendingUserTransactions();
 
-    const executionContext = container.resolve<RuntimeMethodExecutionContext>(
-      RuntimeMethodExecutionContext
-    );
     const baseCachedStateService = new CachedStateService(this.stateService);
 
     const networkState =
@@ -110,15 +107,11 @@ export class PrivateMempool extends SequencerModule implements Mempool {
       baseCachedStateService,
       this.protocol.stateServiceProvider,
       networkState,
-      executionContext
+      limit
     );
     log.timeEnd("checkTxValid");
     this.protocol.stateServiceProvider.popCurrentStateService();
     return sortedTxs;
-  }
-
-  public async start(): Promise<void> {
-    noop();
   }
 
   // We iterate through the transactions. For each tx we run the account state hook.
@@ -131,13 +124,23 @@ export class PrivateMempool extends SequencerModule implements Mempool {
     baseService: CachedStateService,
     stateServiceProvider: StateServiceProvider,
     networkState: NetworkState,
-    executionContext: RuntimeMethodExecutionContext
-  ): Promise<PendingTransaction[]> {
-    const skippedTransactions: Record<string, MempoolTransactionPaths> = {};
+    limit?: number
+  ) {
+    const executionContext = container.resolve<RuntimeMethodExecutionContext>(
+      RuntimeMethodExecutionContext
+    );
+    executionContext.clear();
+
+    // Initialize starting state
     const sortedTransactions: PendingTransaction[] = [];
+    const skippedTransactions: Record<string, MempoolTransactionPaths> = {};
+
     let queue: PendingTransaction[] = [...transactions];
 
-    while (queue.length > 0) {
+    while (
+      queue.length > 0 &&
+      sortedTransactions.length < (limit ?? Number.MAX_VALUE)
+    ) {
       const [tx] = queue.splice(0, 1);
       const txStateService = new CachedStateService(baseService);
       stateServiceProvider.setCurrentStateService(txStateService);
@@ -145,7 +148,6 @@ export class PrivateMempool extends SequencerModule implements Mempool {
         networkState: networkState,
         transaction: tx.toProtocolTransaction().transaction,
       };
-      executionContext.clear();
       executionContext.setup(contextInputs);
 
       const signedTransaction = tx.toProtocolTransaction();
@@ -191,7 +193,13 @@ export class PrivateMempool extends SequencerModule implements Mempool {
         }
         stateServiceProvider.popCurrentStateService();
       }
+
+      executionContext.clear();
     }
     return sortedTransactions;
+  }
+
+  public async start(): Promise<void> {
+    noop();
   }
 }

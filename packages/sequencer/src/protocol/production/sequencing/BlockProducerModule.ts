@@ -26,6 +26,7 @@ import { TransactionExecutionService } from "./TransactionExecutionService";
 
 export interface BlockConfig {
   allowEmptyBlock?: boolean;
+  maximumBlockSize?: number;
 }
 
 @sequencerModule()
@@ -53,6 +54,10 @@ export class BlockProducerModule extends SequencerModule<BlockConfig> {
 
   private allowEmptyBlock() {
     return this.config.allowEmptyBlock ?? true;
+  }
+
+  private maximumBlockSize() {
+    return this.config.maximumBlockSize ?? 20;
   }
 
   private prettyPrintBlockContents(block: Block) {
@@ -149,7 +154,7 @@ export class BlockProducerModule extends SequencerModule<BlockConfig> {
     metadata: BlockWithResult;
   }> {
     log.time("collectProductionData > getTxs");
-    const txs = await this.mempool.getTxs();
+    const txs = await this.mempool.getTxs(this.maximumBlockSize());
     log.timeEnd("collectProductionData > getTxs");
 
     log.time("collectProductionData > getLatestBlock");
