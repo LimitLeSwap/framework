@@ -1,5 +1,10 @@
 import { Bool, Provable, Struct } from "o1js";
-import { range, RollupMerkleTreeWitness } from "@proto-kit/common";
+import {
+  InMemoryMerkleTreeStorage,
+  range,
+  RollupMerkleTree,
+  RollupMerkleTreeWitness,
+} from "@proto-kit/common";
 
 import { constants } from "../Constants";
 
@@ -90,7 +95,11 @@ export class StateTransitionProvableBatch extends Struct({
     while (batch.length < constants.stateTransitionProverBatchSize) {
       batch.push(ProvableStateTransition.dummy());
       transitionTypes.push(ProvableStateTransitionType.normal);
-      witnesses.push(new RollupMerkleTreeWitness({ path: [], isLeft: [] }));
+      witnesses.push(
+        new RollupMerkleTree(new InMemoryMerkleTreeStorage()).getWitness(
+          BigInt(0)
+        )
+      );
     }
     return new StateTransitionProvableBatch({
       batch,
