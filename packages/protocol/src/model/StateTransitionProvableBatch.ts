@@ -75,7 +75,7 @@ export class StateTransitionProvableBatch extends Struct({
   ): StateTransitionProvableBatch {
     const batch = transitions.map((entry) => entry.transition);
     const transitionTypes = transitions.map((entry) => entry.type);
-
+    const witnesses = merkleWitnesses.slice();
     // Check that order is correct
     let normalSTsStarted = false;
     transitionTypes.forEach((x) => {
@@ -90,11 +90,12 @@ export class StateTransitionProvableBatch extends Struct({
     while (batch.length < constants.stateTransitionProverBatchSize) {
       batch.push(ProvableStateTransition.dummy());
       transitionTypes.push(ProvableStateTransitionType.normal);
+      witnesses.push(new RollupMerkleTreeWitness({ path: [], isLeft: [] }));
     }
     return new StateTransitionProvableBatch({
       batch,
       transitionTypes,
-      merkleWitnesses,
+      merkleWitnesses: witnesses,
     });
   }
 
