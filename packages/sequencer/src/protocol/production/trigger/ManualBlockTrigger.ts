@@ -1,5 +1,5 @@
 import { inject } from "tsyringe";
-import { injectOptional } from "@proto-kit/common";
+import { injectOptional, log } from "@proto-kit/common";
 
 import { sequencerModule } from "../../../sequencer/builder/SequencerModule";
 import { SettleableBatch } from "../../../storage/model/Batch";
@@ -65,7 +65,10 @@ export class ManualBlockTrigger
   public async produceBlock(
     enqueueInSettlementQueue: boolean = true
   ): Promise<Block | undefined> {
-    return await super.produceBlock(enqueueInSettlementQueue);
+    log.time("trigger.produceBlock");
+    const block = await super.produceBlock(enqueueInSettlementQueue);
+    log.timeEnd("trigger.produceBlock");
+    return block;
   }
 
   public async produceBlockWithResult(

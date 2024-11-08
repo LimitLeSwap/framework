@@ -26,6 +26,14 @@ function logProvable(
 /* eslint-enable */
 
 export const log = {
+  timingEnabled: false,
+  enableTiming: () => {
+    log.timingEnabled = true;
+  },
+  disableTiming: () => {
+    log.timingEnabled = false;
+  },
+
   provable: {
     info: (...args: unknown[]) => {
       logProvable(loglevel.info, ...args);
@@ -65,6 +73,20 @@ export const log = {
     // inside out application, we use the level, but call debug() under the hood
     if (loglevel.getLevel() <= loglevel.levels.TRACE) {
       loglevel.debug(...args);
+    }
+  },
+
+  time: (name: string) => {
+    if (log.timingEnabled) {
+      // eslint-disable-next-line no-console
+      console.time(name);
+    }
+  },
+
+  timeEnd: (name: string) => {
+    if (log.timingEnabled) {
+      // eslint-disable-next-line no-console
+      console.timeEnd(name);
     }
   },
 

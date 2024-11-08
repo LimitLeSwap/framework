@@ -241,6 +241,7 @@ export class TransactionExecutionService {
       Field(lastBlock.toMessagesHash)
     );
 
+    log.time("createBlock > beforeBlock");
     // Get used networkState by executing beforeBlock() hooks
     const networkState = await this.blockHooks.reduce<Promise<NetworkState>>(
       async (reduceNetworkState, hook) =>
@@ -254,9 +255,11 @@ export class TransactionExecutionService {
         }),
       Promise.resolve(lastResult.afterNetworkState)
     );
+    log.timeEnd("createBlock > beforeBlock");
 
     for (const [, tx] of transactions.entries()) {
       try {
+        log.time("createBlock > createExecutionTrace");
         // Create execution trace
         // eslint-disable-next-line no-await-in-loop
         const executionTrace = await this.createExecutionTrace(
@@ -264,9 +267,11 @@ export class TransactionExecutionService {
           tx,
           networkState
         );
+        log.timeEnd("createBlock > createExecutionTrace");
 
         // Push result to results and transaction onto bundle-hash
         executionResults.push(executionTrace);
+        log.time("createBlock > push transactionsHashList");
         if (!tx.isMessage) {
           transactionsHashList.push(tx.hash());
           eternalTransactionsHashList.push(tx.hash());
@@ -277,6 +282,7 @@ export class TransactionExecutionService {
 
           incomingMessagesList.push(actionHash);
         }
+        log.timeEnd("createBlock > push transactionsHashList");
       } catch (error) {
         if (error instanceof Error) {
           log.error("Error in inclusion of tx, skipping", error);
@@ -357,10 +363,12 @@ export class TransactionExecutionService {
     // TODO This can be optimized a lot (we are only interested in the root at this step)
     await blockHashInMemoryStore.preloadKey(block.height.toBigInt());
 
+    log.time("generateMetadataForNextBlock > setLeaf");
     Object.entries(combinedDiff).forEach(([key, state]) => {
       const treeValue = state !== undefined ? Poseidon.hash(state) : Field(0);
       tree.setLeaf(BigInt(key), treeValue);
     });
+    log.timeEnd("generateMetadataForNextBlock > setLeaf");
 
     const stateRoot = tree.getRoot();
     const fromBlockHashRoot = blockHashTree.getRoot();
@@ -451,10 +459,12 @@ export class TransactionExecutionService {
     // The following steps generate and apply the correct STs with the right values
     this.stateServiceProvider.setCurrentStateService(recordingStateService);
 
+    log.time("createExecutionTrace > executeProtocolHooks");
     const protocolResult = await this.executeProtocolHooks(
       runtimeContextInputs,
       blockContextInputs
     );
+    log.timeEnd("createExecutionTrace > executeProtocolHooks");
 
     if (!protocolResult.status.toBoolean()) {
       const error = new Error(
@@ -476,16 +486,20 @@ export class TransactionExecutionService {
       )
     );
 
+    log.time("createExecutionTrace > applyStateTransitions");
     // Apply protocol STs
     await recordingStateService.applyStateTransitions(
       protocolResult.stateTransitions
     );
+    log.timeEnd("createExecutionTrace > applyStateTransitions");
 
+    log.time("executeRuntimeMethod");
     const runtimeResult = await this.executeRuntimeMethod(
       method,
       args,
       runtimeContextInputs
     );
+    log.timeEnd("executeRuntimeMethod");
     log.trace(
       "STs:",
       JSON.stringify(

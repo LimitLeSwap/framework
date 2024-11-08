@@ -95,6 +95,7 @@ export class PrivateMempool extends SequencerModule implements Mempool {
 
   public async getTxs(): Promise<PendingTransaction[]> {
     const txs = await this.transactionStorage.getPendingUserTransactions();
+
     const executionContext = container.resolve<RuntimeMethodExecutionContext>(
       RuntimeMethodExecutionContext
     );
@@ -103,6 +104,7 @@ export class PrivateMempool extends SequencerModule implements Mempool {
     const networkState =
       (await this.getStagedNetworkState()) ?? NetworkState.empty();
 
+    log.time("checkTxValid");
     const sortedTxs = await this.checkTxValid(
       txs,
       baseCachedStateService,
@@ -110,6 +112,7 @@ export class PrivateMempool extends SequencerModule implements Mempool {
       networkState,
       executionContext
     );
+    log.timeEnd("checkTxValid");
     this.protocol.stateServiceProvider.popCurrentStateService();
     return sortedTxs;
   }

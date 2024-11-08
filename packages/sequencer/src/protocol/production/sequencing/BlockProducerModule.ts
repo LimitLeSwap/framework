@@ -97,7 +97,9 @@ export class BlockProducerModule extends SequencerModule<BlockConfig> {
   public async tryProduceBlock(): Promise<BlockWithResult | undefined> {
     if (!this.productionInProgress) {
       try {
+        log.time("produceBlock");
         const block = await this.produceBlock();
+        log.timeEnd("produceBlock");
 
         if (block === undefined) {
           if (!this.allowEmptyBlock()) {
@@ -115,6 +117,7 @@ export class BlockProducerModule extends SequencerModule<BlockConfig> {
 
         // Generate metadata for next block
 
+        log.time("produceBlockResult");
         // TODO: make async of production in the future
         const result = await this.executionService.generateMetadataForNextBlock(
           block,
@@ -122,6 +125,7 @@ export class BlockProducerModule extends SequencerModule<BlockConfig> {
           this.blockTreeStore,
           true
         );
+        log.timeEnd("produceBlockResult");
 
         return {
           block,
@@ -144,9 +148,13 @@ export class BlockProducerModule extends SequencerModule<BlockConfig> {
     txs: PendingTransaction[];
     metadata: BlockWithResult;
   }> {
+    log.time("collectProductionData > getTxs");
     const txs = await this.mempool.getTxs();
+    log.timeEnd("collectProductionData > getTxs");
 
+    log.time("collectProductionData > getLatestBlock");
     const parentBlock = await this.blockQueue.getLatestBlock();
+    log.timeEnd("collectProductionData > getLatestBlock");
 
     if (parentBlock === undefined) {
       log.debug(
@@ -154,11 +162,16 @@ export class BlockProducerModule extends SequencerModule<BlockConfig> {
       );
     }
 
+    log.time("collectProductionData > getMessages");
     const messages = await this.messageStorage.getMessages(
       parentBlock?.block.toMessagesHash.toString() ??
         ACTIONS_EMPTY_HASH.toString()
     );
+    log.time("collectProductionData > getMessages");
+
+    log.time("collectProductionData > determine parent block");
     const metadata = parentBlock ?? BlockWithResult.createEmpty();
+    log.timeEnd("collectProductionData > determine parent block");
 
     log.debug(
       `Block collected, ${txs.length} txs, ${messages.length} messages`
@@ -173,7 +186,9 @@ export class BlockProducerModule extends SequencerModule<BlockConfig> {
   private async produceBlock(): Promise<Block | undefined> {
     this.productionInProgress = true;
 
+    log.time("collectProductionData");
     const { txs, metadata } = await this.collectProductionData();
+    log.timeEnd("collectProductionData");
 
     // Skip production if no transactions are available for now
     if (txs.length === 0 && !this.allowEmptyBlock()) {
@@ -184,14 +199,18 @@ export class BlockProducerModule extends SequencerModule<BlockConfig> {
       this.unprovenStateService
     );
 
+    log.time("createBlock");
     const block = await this.executionService.createBlock(
       cachedStateService,
       txs,
       metadata,
       this.allowEmptyBlock()
     );
+    log.timeEnd("createBlock");
 
+    log.time("mergeIntoParent");
     await cachedStateService.mergeIntoParent();
+    log.timeEnd("mergeIntoParent");
 
     this.productionInProgress = false;
 

@@ -70,6 +70,7 @@ export class BlockTriggerBase<
   ): Promise<BlockWithResult | undefined> {
     const block = await this.blockProducerModule.tryProduceBlock();
 
+    log.time("pushBlock & pushResult");
     if (block && enqueueInSettlementQueue) {
       await this.blockQueue.pushBlock(block.block);
       this.events.emit("block-produced", block.block);
@@ -77,6 +78,7 @@ export class BlockTriggerBase<
       await this.blockQueue.pushResult(block.result);
       this.events.emit("block-metadata-produced", block);
     }
+    log.timeEnd("pushBlock & pushResult");
 
     return block;
   }
