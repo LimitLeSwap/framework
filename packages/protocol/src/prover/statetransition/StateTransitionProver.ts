@@ -27,7 +27,6 @@ import {
   StateTransitionProverPublicInput,
   StateTransitionProverPublicOutput,
 } from "./StateTransitionProvable";
-import { StateTransitionWitnessProviderReference } from "./StateTransitionWitnessProviderReference";
 
 const errors = {
   propertyNotMatching: (property: string, step: string) =>
@@ -63,8 +62,7 @@ export class StateTransitionProverProgrammable extends ZkProgrammable<
   StateTransitionProverPublicOutput
 > {
   public constructor(
-    private readonly stateTransitionProver: StateTransitionProver,
-    public readonly witnessProviderReference: StateTransitionWitnessProviderReference
+    private readonly stateTransitionProver: StateTransitionProver
   ) {
     super();
   }
@@ -338,15 +336,9 @@ export class StateTransitionProver
 {
   public zkProgrammable: StateTransitionProverProgrammable;
 
-  public constructor(
-    // Injected
-    public readonly witnessProviderReference: StateTransitionWitnessProviderReference
-  ) {
+  public constructor() {
     super();
-    this.zkProgrammable = new StateTransitionProverProgrammable(
-      this,
-      witnessProviderReference
-    );
+    this.zkProgrammable = new StateTransitionProverProgrammable(this);
   }
 
   public runBatch(
