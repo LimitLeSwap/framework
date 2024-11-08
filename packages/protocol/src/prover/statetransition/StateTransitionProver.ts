@@ -185,10 +185,10 @@ export class StateTransitionProverProgrammable extends ZkProgrammable<
     state: StateTransitionProverExecutionState,
     transition: ProvableStateTransition,
     type: ProvableStateTransitionType,
-    witness: RollupMerkleTreeWitness,
+    merkleWitness: RollupMerkleTreeWitness,
     index = 0
   ) {
-    const membershipValid = witness.checkMembership(
+    const membershipValid = merkleWitness.checkMembership(
       state.stateRoot,
       transition.path,
       transition.from.value
@@ -203,7 +203,7 @@ export class StateTransitionProverProgrammable extends ZkProgrammable<
         )
       );
 
-    const newRoot = witness.calculateRoot(transition.to.value);
+    const newRoot = merkleWitness.calculateRoot(transition.to.value);
 
     state.stateRoot = Provable.if(
       transition.to.isSome,
