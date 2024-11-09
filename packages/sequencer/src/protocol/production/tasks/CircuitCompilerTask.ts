@@ -22,10 +22,6 @@ export class DefaultSerializer implements TaskSerializer<undefined> {
   }
 }
 
-function vkMaker(input: { data: string; hash: string }): VerificationKey {
-  return new VerificationKey({ data: input.data, hash: Field(input.hash) });
-}
-
 export class VKResultSerializer implements TaskSerializer<VKRecord> {
   public toJSON(input: VKRecord): string {
     const temp: VKRecordLite = Object.keys(input).reduce<VKRecordLite>(
