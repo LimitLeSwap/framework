@@ -25,6 +25,11 @@ function logProvable(
 }
 /* eslint-enable */
 
+// eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+if (process.env?.IN_CI ?? false) {
+  loglevel.setLevel("ERROR");
+}
+
 export const log = {
   provable: {
     info: (...args: unknown[]) => {
@@ -73,7 +78,10 @@ export const log = {
   },
 
   setLevel: (level: LogLevelDesc) => {
-    loglevel.setLevel(level);
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+    if (!(process.env?.IN_CI ?? false)) {
+      loglevel.setLevel(level);
+    }
   },
 
   get levels() {
