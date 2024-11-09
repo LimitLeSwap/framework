@@ -1,6 +1,9 @@
 import { inject, injectable, singleton } from "tsyringe";
 
-import { AreProofsEnabled } from "../zkProgrammable/ZkProgrammable";
+import {
+  AreProofsEnabled,
+  CompileArtifact,
+} from "../zkProgrammable/ZkProgrammable";
 
 import {
   ArtifactRecord,
@@ -38,7 +41,7 @@ export class CompileRegistry {
     return this.artifacts[target.name];
   }
 
-  public getArtifact(name: string) {
+  public getArtifact(name: string): CompileArtifact | undefined {
     if (this.artifacts[name] === undefined) {
       throw new Error(
         `Artifact for ${name} not available, did you compile it via the CompileRegistry?`

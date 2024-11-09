@@ -9,7 +9,7 @@ import {
   Protocol,
   StateTransitionProof,
 } from "@proto-kit/protocol";
-import { log } from "@proto-kit/common";
+import { log, MOCK_PROOF } from "@proto-kit/common";
 
 import { TaskQueue } from "../../worker/queue/TaskQueue";
 import { Flow, FlowCreator } from "../../worker/flow/Flow";
@@ -194,7 +194,11 @@ export class BlockTaskFlowService {
       this.flowCreator
     );
     blockMergingFlow.onCompletion(async (result) => {
-      log.debug(`Block generation finished, with proof ${result.proof}`); // TODO Remove result logging
+      const printableProof =
+        result.proof === MOCK_PROOF
+          ? result.proof
+          : result.toJSON().proof.slice(100);
+      log.debug(`Block generation finished, with proof ${printableProof}`); // TODO Remove result logging
       flow.resolve(result);
     });
     blockMergingFlow.deferErrorsTo(flow);
