@@ -230,7 +230,9 @@ export class StateTransitionProverProgrammable extends ZkProgrammable<
         ])
       )
       .assertTrue();
+
     merkleWitness.leafPrevious.leaf.nextPath.assertGreaterThan(transition.path);
+
     const rootWithLeafChanged =
       merkleWitness.leafPrevious.merkleWitness.calculateRoot(
         Poseidon.hash([
