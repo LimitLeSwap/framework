@@ -1,3 +1,4 @@
+// eslint-disable-next-line max-classes-per-file
 import { Bool, Field, Poseidon, Struct } from "o1js";
 
 import { TypedClass } from "../types";
@@ -12,10 +13,14 @@ class LinkedLeaf extends Struct({
   nextPath: Field,
 }) {}
 
-export class LinkedStructTemplate extends Struct({
+export class LinkedLeafAndMerkleWitness extends Struct({
   leaf: LinkedLeaf,
   merkleWitness: RollupMerkleTreeWitness,
-  nextFreeIndex: Field,
+}) {}
+
+class LinkedStructTemplate extends Struct({
+  leafPrevious: LinkedLeafAndMerkleWitness,
+  leafCurrent: LinkedLeafAndMerkleWitness,
 }) {}
 
 export interface AbstractLinkedMerkleWitness extends LinkedStructTemplate {}
@@ -57,7 +62,7 @@ export interface AbstractLinkedMerkleTree {
    * @param path Position of the leaf node.
    * @returns The witness that belongs to the leaf.
    */
-  getWitness(path: bigint): AbstractLinkedMerkleWitness;
+  getWitness(path: bigint): LinkedLeafAndMerkleWitness;
 }
 
 export interface AbstractLinkedMerkleTreeClass {
@@ -186,6 +191,7 @@ export function createLinkedMerkleTree(
     public setValue(path: bigint, value: bigint) {
       let index = this.store.getLeafIndex(path);
       const prevLeaf = this.store.getPathLessOrEqual(path);
+      let witness;
       if (index === undefined) {
         // The above means the path doesn't already exist and we are inserting, not updating.
         // This requires us to update the node with the previous path, as well.
@@ -202,8 +208,24 @@ export function createLinkedMerkleTree(
           path: Field(newPrevLeaf.path),
           nextPath: Field(newPrevLeaf.nextPath),
         });
+        witness = this.getWitness(prevLeaf.path);
         index = this.store.getMaximumIndex() + 1n;
       }
+      // The following sets a default for the previous value
+      // TODO: How to handle this better.
+      const witnessPrevious =
+        witness ??
+        new LinkedLeafAndMerkleWitness({
+          merkleWitness: new RollupMerkleTreeWitness({
+            path: [],
+            isLeft: [],
+          }),
+          leaf: new LinkedLeaf({
+            value: Field(0),
+            path: Field(0),
+            nextPath: Field(0),
+          }),
+        });
       const newLeaf = {
         value: value,
         path: path,
@@ -214,6 +236,10 @@ export function createLinkedMerkleTree(
         value: Field(newLeaf.value),
         path: Field(newLeaf.path),
         nextPath: Field(newLeaf.nextPath),
+      });
+      return new LinkedMerkleWitness({
+        leafPrevious: witnessPrevious,
+        leafCurrent: this.getWitness(newLeaf.path),
       });
     }
 
@@ -239,7 +265,7 @@ export function createLinkedMerkleTree(
      * @param path of the leaf node.
      * @returns The witness that belongs to the leaf.
      */
-    public getWitness(path: bigint): LinkedMerkleWitness {
+    public getWitness(path: bigint): LinkedLeafAndMerkleWitness {
       const leaf = this.getPathLessOrEqual(path);
 
       const pathArray = [];
@@ -262,13 +288,12 @@ export function createLinkedMerkleTree(
         pathArray.push(sibling);
         currentIndex /= 2n;
       }
-      return new LinkedMerkleWitness({
+      return new LinkedLeafAndMerkleWitness({
         merkleWitness: new RollupMerkleTreeWitness({
           path: pathArray,
           isLeft: isLefts,
         }),
         leaf: leaf,
-        nextFreeIndex: Field(this.store.getMaximumIndex() + 1n),
       });
     }
   };

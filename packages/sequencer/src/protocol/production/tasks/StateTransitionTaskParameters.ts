@@ -5,6 +5,7 @@ import {
 } from "@proto-kit/protocol";
 import { RollupMerkleTreeWitness } from "@proto-kit/common";
 import { Bool } from "o1js";
+import { LinkedMerkleTreeWitness } from "@proto-kit/common/dist/trees/LinkedMerkleTree";
 
 import { TaskSerializer } from "../../../worker/flow/Task";
 
@@ -14,7 +15,7 @@ export interface StateTransitionProofParameters {
     transition: ProvableStateTransition;
     type: ProvableStateTransitionType;
   }[];
-  merkleWitnesses: RollupMerkleTreeWitness[];
+  merkleWitnesses: LinkedMerkleTreeWitness[];
 }
 
 interface StateTransitionParametersJSON {
@@ -23,7 +24,7 @@ interface StateTransitionParametersJSON {
     transition: ReturnType<typeof ProvableStateTransition.toJSON>;
     type: boolean;
   }[];
-  merkleWitnesses: ReturnType<typeof RollupMerkleTreeWitness.toJSON>[];
+  merkleWitnesses: ReturnType<typeof LinkedMerkleTreeWitness.toJSON>[];
 }
 
 export class StateTransitionParametersSerializer
@@ -43,7 +44,7 @@ export class StateTransitionParametersSerializer
       }),
 
       merkleWitnesses: parameters.merkleWitnesses.map((witness) =>
-        RollupMerkleTreeWitness.toJSON(witness)
+        LinkedMerkleTreeWitness.toJSON(witness)
       ),
     } satisfies StateTransitionParametersJSON);
   }
@@ -69,7 +70,7 @@ export class StateTransitionParametersSerializer
 
       merkleWitnesses: parsed.merkleWitnesses.map(
         (witness) =>
-          new RollupMerkleTreeWitness(RollupMerkleTreeWitness.fromJSON(witness))
+          new LinkedMerkleTreeWitness(LinkedMerkleTreeWitness.fromJSON(witness))
       ),
     };
   }

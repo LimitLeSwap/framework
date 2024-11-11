@@ -10,9 +10,9 @@ import {
   StateTransitionProverPublicInput,
   StateTransitionType,
 } from "@proto-kit/protocol";
-import { RollupMerkleTree } from "@proto-kit/common";
 import { Bool, Field } from "o1js";
 import chunk from "lodash/chunk";
+import { LinkedMerkleTree } from "@proto-kit/common/dist/trees/LinkedMerkleTree";
 
 import { distinctByString } from "../../helpers/utils";
 import { CachedMerkleTreeStore } from "../../state/merkle/CachedMerkleTreeStore";
@@ -105,8 +105,8 @@ export class TransactionTraceService {
       await stateServices.merkleStore.preloadKey(0n);
 
       fromStateRoot = Field(
-        stateServices.merkleStore.getNode(0n, RollupMerkleTree.HEIGHT - 1) ??
-          RollupMerkleTree.EMPTY_ROOT
+        stateServices.merkleStore.getNode(0n, LinkedMerkleTree.HEIGHT - 1) ??
+          LinkedMerkleTree.EMPTY_ROOT
       );
 
       stParameters = [
@@ -272,8 +272,8 @@ export class TransactionTraceService {
 
     await merkleStore.preloadKeys(keys.map((key) => key.toBigInt()));
 
-    const tree = new RollupMerkleTree(merkleStore);
-    const runtimeTree = new RollupMerkleTree(runtimeSimulationMerkleStore);
+    const tree = new LinkedMerkleTree(merkleStore);
+    const runtimeTree = new LinkedMerkleTree(runtimeSimulationMerkleStore);
     // const runtimeTree = new RollupMerkleTree(merkleStore);
     const initialRoot = tree.getRoot();
 
@@ -323,9 +323,9 @@ export class TransactionTraceService {
         const witness = usedTree.getWitness(provableTransition.path.toBigInt());
 
         if (provableTransition.to.isSome.toBoolean()) {
-          usedTree.setLeaf(
+          usedTree.setValue(
             provableTransition.path.toBigInt(),
-            provableTransition.to.value
+            provableTransition.to.value.toBigInt()
           );
 
           stateRoot = usedTree.getRoot();

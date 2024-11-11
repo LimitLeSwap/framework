@@ -187,25 +187,30 @@ export class StateTransitionProverProgrammable extends ZkProgrammable<
     merkleWitness: LinkedMerkleTreeWitness,
     index = 0
   ) {
+    // The following checks if an existing path or non-existing path.
+    // It won't be an insert (non-existing) if the 'from' is empty.
     const checkLeafValue = Provable.if(
       transition.from.isSome,
       Bool,
-      merkleWitness.leaf.path.equals(transition.path),
-      merkleWitness.leaf.path
+      merkleWitness.leafCurrent.leaf.path.equals(transition.path),
+      merkleWitness.leafCurrent.leaf.path
         .lessThan(transition.path)
-        .and(merkleWitness.leaf.nextPath.greaterThan(transition.path))
+        .and(
+          merkleWitness.leafCurrent.leaf.nextPath.greaterThan(transition.path)
+        )
     );
 
     checkLeafValue.assertTrue();
 
-    const membershipValid = merkleWitness.merkleWitness.checkMembershipSimple(
-      state.stateRoot,
-      Poseidon.hash([
-        transition.from.value,
-        transition.path,
-        merkleWitness.leaf.nextPath,
-      ])
-    );
+    const membershipValid =
+      merkleWitness.leafCurrent.merkleWitness.checkMembershipSimple(
+        state.stateRoot,
+        Poseidon.hash([
+          transition.from.value,
+          transition.path,
+          merkleWitness.leafCurrent.leaf.nextPath,
+        ])
+      );
 
     membershipValid.assertTrue(
       errors.merkleWitnessNotCorrect(
@@ -214,27 +219,30 @@ export class StateTransitionProverProgrammable extends ZkProgrammable<
       )
     );
 
-    // Now for inserting. This requires changing the leaf before and inserting a new leaf.
-    // The new leaf requires a new witness.
-    const oldRoot = merkleWitness.merkleWitness.calculateRoot(
+    // Now for inserting.
+
+    const oldRoot = merkleWitness.leafPrevious.merkleWitness.calculateRoot(
       Poseidon.hash([
-        merkleWitness.leaf.value,
-        merkleWitness.leaf.path,
+        merkleWitness.leafPrevious.leaf.value,
+        merkleWitness.leafPrevious.leaf.path,
         transition.path,
       ])
     );
 
-    // const newWitness = Provable.witness(LinkedMerkleTreeWitness, () =>
-    //   this.witnessProvider.getWitness(transition.path)
-    // );
+    const membershipValidInsert =
+      merkleWitness.leafCurrent.merkleWitness.checkMembershipSimple(
+        oldRoot,
+        Poseidon.hash([
+          merkleWitness.leafCurrent.leaf.value,
+          merkleWitness.leafCurrent.leaf.path,
+          merkleWitness.leafCurrent.leaf.nextPath,
+        ])
+      );
 
-    const newRoot = merkleWitness.merkleWitness.calculateRoot(
-      transition.to.value
-    );
-    // const newRoot = witness.merkleWitness.calculateRoot(transition.to.value);
+    membershipValidInsert.assertTrue();
 
     // LEAVE AS IS for below Linked Merkle Tree
-    const newRoot = merkleWitness.merkleWitness.calculateRoot(
+    const newRoot = merkleWitness.leafCurrent.merkleWitness.calculateRoot(
       transition.to.value
     );
 
