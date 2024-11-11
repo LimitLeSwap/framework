@@ -3,7 +3,6 @@ import {
   PlainZkProgram,
   provableMethod,
   ZkProgrammable,
-  RollupMerkleTreeWitness,
 } from "@proto-kit/common";
 import { Bool, Field, Poseidon, Provable, SelfProof, ZkProgram } from "o1js";
 import { injectable } from "tsyringe";
