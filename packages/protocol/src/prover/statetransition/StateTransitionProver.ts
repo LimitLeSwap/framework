@@ -3,6 +3,7 @@ import {
   PlainZkProgram,
   provableMethod,
   ZkProgrammable,
+  RollupMerkleTreeWitness,
 } from "@proto-kit/common";
 import { Bool, Field, Poseidon, Provable, SelfProof, ZkProgram } from "o1js";
 import { injectable } from "tsyringe";
@@ -157,7 +158,7 @@ export class StateTransitionProverProgrammable extends ZkProgrammable<
 
     const transitions = transitionBatch.batch;
     const types = transitionBatch.transitionTypes;
-    const merkleWitness = transitionBatch.merkleWitnesses;
+    const { merkleWitnesses } = transitionBatch;
     for (
       let index = 0;
       index < constants.stateTransitionProverBatchSize;
@@ -167,7 +168,7 @@ export class StateTransitionProverProgrammable extends ZkProgrammable<
         state,
         transitions[index],
         types[index],
-        merkleWitness[index],
+        merkleWitnesses[index],
         index
       );
     }
@@ -183,30 +184,26 @@ export class StateTransitionProverProgrammable extends ZkProgrammable<
     state: StateTransitionProverExecutionState,
     transition: ProvableStateTransition,
     type: ProvableStateTransitionType,
-    merkleWitness: RollupMerkleTreeWitness,
+    merkleWitness: LinkedMerkleTreeWitness,
     index = 0
   ) {
-    const witness = Provable.witness(LinkedMerkleTreeWitness, () =>
-      this.witnessProvider.getWitness(transition.path)
-    );
-
     const checkLeafValue = Provable.if(
       transition.from.isSome,
       Bool,
-      witness.leaf.path.equals(transition.path),
-      witness.leaf.path
+      merkleWitness.leaf.path.equals(transition.path),
+      merkleWitness.leaf.path
         .lessThan(transition.path)
-        .and(witness.leaf.nextPath.greaterThan(transition.path))
+        .and(merkleWitness.leaf.nextPath.greaterThan(transition.path))
     );
 
     checkLeafValue.assertTrue();
 
-    const membershipValid = witness.merkleWitness.checkMembershipSimple(
+    const membershipValid = merkleWitness.merkleWitness.checkMembershipSimple(
       state.stateRoot,
       Poseidon.hash([
         transition.from.value,
         transition.path,
-        witness.leaf.nextPath,
+        merkleWitness.leaf.nextPath,
       ])
     );
 
@@ -219,19 +216,27 @@ export class StateTransitionProverProgrammable extends ZkProgrammable<
 
     // Now for inserting. This requires changing the leaf before and inserting a new leaf.
     // The new leaf requires a new witness.
-    const oldRoot = witness.merkleWitness.calculateRoot(
-      Poseidon.hash([witness.leaf.value, witness.leaf.path, transition.path])
+    const oldRoot = merkleWitness.merkleWitness.calculateRoot(
+      Poseidon.hash([
+        merkleWitness.leaf.value,
+        merkleWitness.leaf.path,
+        transition.path,
+      ])
     );
 
-    const newWitness = Provable.witness(LinkedMerkleTreeWitness, () =>
-      this.witnessProvider.getWitness(transition.path)
-    );
+    // const newWitness = Provable.witness(LinkedMerkleTreeWitness, () =>
+    //   this.witnessProvider.getWitness(transition.path)
+    // );
 
-    const newRoot = witness.merkleWitness.calculateRoot(transition.to.value);
+    const newRoot = merkleWitness.merkleWitness.calculateRoot(
+      transition.to.value
+    );
     // const newRoot = witness.merkleWitness.calculateRoot(transition.to.value);
 
     // LEAVE AS IS for below Linked Merkle Tree
-    const newRoot = merkleWitness.calculateRoot(transition.to.value);
+    const newRoot = merkleWitness.merkleWitness.calculateRoot(
+      transition.to.value
+    );
 
     state.stateRoot = Provable.if(
       transition.to.isSome,

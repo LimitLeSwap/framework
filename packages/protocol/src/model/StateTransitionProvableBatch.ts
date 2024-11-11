@@ -1,10 +1,9 @@
 import { Bool, Provable, Struct } from "o1js";
+import { InMemoryLinkedMerkleTreeStorage, range } from "@proto-kit/common";
 import {
-  InMemoryMerkleTreeStorage,
-  range,
-  RollupMerkleTree,
-  RollupMerkleTreeWitness,
-} from "@proto-kit/common";
+  LinkedMerkleTree,
+  LinkedMerkleTreeWitness,
+} from "@proto-kit/common/dist/trees/LinkedMerkleTree";
 
 import { constants } from "../Constants";
 
@@ -67,7 +66,7 @@ export class StateTransitionProvableBatch extends Struct({
   ),
 
   merkleWitnesses: Provable.Array(
-    RollupMerkleTreeWitness,
+    LinkedMerkleTreeWitness,
     constants.stateTransitionProverBatchSize
   ),
 }) {
@@ -76,7 +75,7 @@ export class StateTransitionProvableBatch extends Struct({
       transition: ProvableStateTransition;
       type: ProvableStateTransitionType;
     }[],
-    merkleWitnesses: RollupMerkleTreeWitness[]
+    merkleWitnesses: LinkedMerkleTreeWitness[]
   ): StateTransitionProvableBatch {
     const batch = transitions.map((entry) => entry.transition);
     const transitionTypes = transitions.map((entry) => entry.type);
@@ -96,7 +95,7 @@ export class StateTransitionProvableBatch extends Struct({
       batch.push(ProvableStateTransition.dummy());
       transitionTypes.push(ProvableStateTransitionType.normal);
       witnesses.push(
-        new RollupMerkleTree(new InMemoryMerkleTreeStorage()).getWitness(
+        new LinkedMerkleTree(new InMemoryLinkedMerkleTreeStorage()).getWitness(
           BigInt(0)
         )
       );
@@ -111,7 +110,7 @@ export class StateTransitionProvableBatch extends Struct({
   public static fromTransitions(
     transitions: ProvableStateTransition[],
     protocolTransitions: ProvableStateTransition[],
-    merkleWitnesses: RollupMerkleTreeWitness[]
+    merkleWitnesses: LinkedMerkleTreeWitness[]
   ): StateTransitionProvableBatch {
     const array = transitions.slice().concat(protocolTransitions);
 
@@ -138,7 +137,7 @@ export class StateTransitionProvableBatch extends Struct({
   private constructor(object: {
     batch: ProvableStateTransition[];
     transitionTypes: ProvableStateTransitionType[];
-    merkleWitnesses: RollupMerkleTreeWitness[];
+    merkleWitnesses: LinkedMerkleTreeWitness[];
   }) {
     super(object);
   }
