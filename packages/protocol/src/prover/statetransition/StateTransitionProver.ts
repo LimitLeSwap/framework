@@ -220,29 +220,40 @@ export class StateTransitionProverProgrammable extends ZkProgrammable<
 
     // Now for inserting.
 
-    const oldRoot = merkleWitness.leafPrevious.merkleWitness.calculateRoot(
-      Poseidon.hash([
-        merkleWitness.leafPrevious.leaf.value,
-        merkleWitness.leafPrevious.leaf.path,
-        transition.path,
-      ])
-    );
-
-    const membershipValidInsert =
-      merkleWitness.leafCurrent.merkleWitness.checkMembershipSimple(
-        oldRoot,
+    merkleWitness.leafPrevious.merkleWitness
+      .checkMembershipSimple(
+        state.stateRoot,
         Poseidon.hash([
-          merkleWitness.leafCurrent.leaf.value,
-          merkleWitness.leafCurrent.leaf.path,
-          merkleWitness.leafCurrent.leaf.nextPath,
+          merkleWitness.leafPrevious.leaf.value,
+          merkleWitness.leafPrevious.leaf.path,
+          merkleWitness.leafPrevious.leaf.nextPath,
+        ])
+      )
+      .assertTrue();
+    merkleWitness.leafPrevious.leaf.nextPath.assertGreaterThan(transition.path);
+    const rootWithLeafChanged =
+      merkleWitness.leafPrevious.merkleWitness.calculateRoot(
+        Poseidon.hash([
+          merkleWitness.leafPrevious.leaf.value,
+          merkleWitness.leafPrevious.leaf.path,
+          transition.path,
         ])
       );
 
-    membershipValidInsert.assertTrue();
+    merkleWitness.leafCurrent.merkleWitness
+      .checkMembershipSimple(
+        rootWithLeafChanged,
+        Poseidon.hash([Field(0), Field(0), Field(0)])
+      )
+      .assertTrue();
 
     // LEAVE AS IS for below Linked Merkle Tree
     const newRoot = merkleWitness.leafCurrent.merkleWitness.calculateRoot(
-      transition.to.value
+      Poseidon.hash([
+        transition.to.value,
+        transition.path,
+        merkleWitness.leafPrevious.leaf.nextPath,
+      ])
     );
 
     state.stateRoot = Provable.if(

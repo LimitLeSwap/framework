@@ -197,6 +197,7 @@ export function createLinkedMerkleTree(
         // This requires us to update the node with the previous path, as well.
         // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
         const prevLeafIndex = this.store.getLeafIndex(prevLeaf.path) as bigint;
+        witness = this.getWitness(prevLeaf.path);
         const newPrevLeaf = {
           value: prevLeaf.value,
           path: prevLeaf.path,
@@ -208,7 +209,6 @@ export function createLinkedMerkleTree(
           path: Field(newPrevLeaf.path),
           nextPath: Field(newPrevLeaf.nextPath),
         });
-        witness = this.getWitness(prevLeaf.path);
         index = this.store.getMaximumIndex() + 1n;
       }
       // The following sets a default for the previous value
@@ -226,11 +226,13 @@ export function createLinkedMerkleTree(
             nextPath: Field(0),
           }),
         });
+
       const newLeaf = {
         value: value,
         path: path,
         nextPath: prevLeaf.nextPath,
       };
+      const witnessNext = this.getWitness(newLeaf.path);
       this.store.setLeaf(index, newLeaf);
       this.setLeaf(index, {
         value: Field(newLeaf.value),
@@ -239,7 +241,7 @@ export function createLinkedMerkleTree(
       });
       return new LinkedMerkleWitness({
         leafPrevious: witnessPrevious,
-        leafCurrent: this.getWitness(newLeaf.path),
+        leafCurrent: witnessNext,
       });
     }
 
