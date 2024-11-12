@@ -202,7 +202,6 @@ export class StateTransitionProverProgrammable extends ZkProgrammable<
     checkLeafValue.assertTrue();
 
     // Now for inserting.
-
     merkleWitness.leafPrevious.merkleWitness
       .checkMembershipSimple(
         state.stateRoot,
@@ -225,20 +224,46 @@ export class StateTransitionProverProgrammable extends ZkProgrammable<
         ])
       );
 
-    merkleWitness.leafCurrent.merkleWitness
-      .checkMembershipSimple(
+    // We now check that whether we have an update or insert.
+    // If insert then we have the current path would be 0.
+    const secondWitness = Provable.if(
+      merkleWitness.leafCurrent.leaf.path.equals(0n),
+      merkleWitness.leafCurrent.merkleWitness.checkMembershipSimple(
         rootWithLeafChanged,
         Poseidon.hash([Field(0), Field(0), Field(0)])
+      ),
+      merkleWitness.leafCurrent.merkleWitness.checkMembershipSimple(
+        rootWithLeafChanged,
+        Poseidon.hash([
+          transition.from.value,
+          transition.path,
+          merkleWitness.leafCurrent.leaf.nextPath,
+        ])
       )
-      .assertTrue();
+    );
 
-    // LEAVE AS IS for below Linked Merkle Tree
-    const newRoot = merkleWitness.leafCurrent.merkleWitness.calculateRoot(
-      Poseidon.hash([
-        transition.to.value,
-        transition.path,
-        merkleWitness.leafPrevious.leaf.nextPath,
-      ])
+    secondWitness.assertTrue();
+
+    // Compute the new final root.
+    // For an insert we have to hash the new leaf and use the leafPrev's nextPath
+    // For an update we just use the new value, but keep the leafCurrent.s
+    // next path the same.
+    const newRoot = Provable.if(
+      merkleWitness.leafCurrent.leaf.path.equals(0n),
+      merkleWitness.leafCurrent.merkleWitness.calculateRoot(
+        Poseidon.hash([
+          transition.to.value,
+          transition.path,
+          merkleWitness.leafPrevious.leaf.nextPath,
+        ])
+      ),
+      merkleWitness.leafCurrent.merkleWitness.calculateRoot(
+        Poseidon.hash([
+          transition.from.value,
+          transition.path,
+          merkleWitness.leafCurrent.leaf.nextPath,
+        ])
+      )
     );
 
     state.stateRoot = Provable.if(
