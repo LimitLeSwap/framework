@@ -160,7 +160,8 @@ export function createLinkedMerkleTree(
     }
 
     /**
-     * Sets the value of a leaf node at a given index to a given value.
+     * Sets the value of a leaf node at a given index to a given value
+     * and carry the change through to the tree.
      * @param index Position of the leaf node.
      * @param leaf New value.
      */
@@ -268,14 +269,23 @@ export function createLinkedMerkleTree(
      * @returns The witness that belongs to the leaf.
      */
     public getWitness(path: bigint): LinkedLeafAndMerkleWitness {
-      const leaf = this.getPathLessOrEqual(path);
+      let currentIndex = this.store.getLeafIndex(path);
+      let leaf;
+
+      if (currentIndex === undefined) {
+        currentIndex = this.store.getMaximumIndex() + 1n;
+        leaf = new LinkedLeaf({
+          value: Field(0),
+          path: Field(0),
+          nextPath: Field(0),
+        });
+      } else {
+        leaf = this.getLeaf(path);
+      }
 
       const pathArray = [];
       const isLefts = [];
-      // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-      let currentIndex = this.store.getLeafIndex(
-        leaf.path.toBigInt()
-      ) as bigint;
+
       for (
         let level = 0;
         level < AbstractLinkedRollupMerkleTree.HEIGHT - 1;
