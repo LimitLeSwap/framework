@@ -264,7 +264,7 @@ export function createLinkedMerkleTree(
     /**
      * Returns the witness (also known as
      * [Merkle Proof or Merkle Witness](https://computersciencewiki.org/index.php/Merkle_proof))
-     * for the leaf at the given index.
+     * for the leaf at the given path, otherwise returns a witness for the first unused index.
      * @param path of the leaf node.
      * @returns The witness that belongs to the leaf.
      */
