@@ -3,7 +3,6 @@ import {
   ProvableStateTransitionType,
   StateTransitionProverPublicInput,
 } from "@proto-kit/protocol";
-import { RollupMerkleTreeWitness } from "@proto-kit/common";
 import { Bool } from "o1js";
 import { LinkedMerkleTreeWitness } from "@proto-kit/common/dist/trees/LinkedMerkleTree";
 
