@@ -1,10 +1,10 @@
 import {
-  InMemoryMerkleTreeStorage,
+  InMemoryLinkedMerkleTreeStorage,
   MerkleTreeStore,
   RollupMerkleTree,
 } from "@proto-kit/common";
 
-export class SyncCachedMerkleTreeStore extends InMemoryMerkleTreeStorage {
+export class SyncCachedMerkleTreeStore extends InMemoryLinkedMerkleTreeStorage {
   public constructor(private readonly parent: MerkleTreeStore) {
     super();
   }

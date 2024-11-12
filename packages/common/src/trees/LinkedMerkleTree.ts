@@ -62,7 +62,7 @@ export interface AbstractLinkedMerkleTree {
    * @param path Position of the leaf node.
    * @returns The witness that belongs to the leaf.
    */
-  getWitness(path: bigint): LinkedLeafAndMerkleWitness;
+  getWitness(path: bigint): LinkedMerkleTreeWitness;
 }
 
 export interface AbstractLinkedMerkleTreeClass {
@@ -192,13 +192,13 @@ export function createLinkedMerkleTree(
     public setValue(path: bigint, value: bigint) {
       let index = this.store.getLeafIndex(path);
       const prevLeaf = this.store.getPathLessOrEqual(path);
-      let witness;
+      let witnessPrevious;
       if (index === undefined) {
         // The above means the path doesn't already exist and we are inserting, not updating.
         // This requires us to update the node with the previous path, as well.
         // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
         const prevLeafIndex = this.store.getLeafIndex(prevLeaf.path) as bigint;
-        witness = this.getWitness(prevLeaf.path);
+        witnessPrevious = this.getWitness(prevLeaf.path).leafCurrent;
         const newPrevLeaf = {
           value: prevLeaf.value,
           path: prevLeaf.path,
@@ -211,22 +211,11 @@ export function createLinkedMerkleTree(
           nextPath: Field(newPrevLeaf.nextPath),
         });
         index = this.store.getMaximumIndex() + 1n;
+      } else {
+        witnessPrevious = this.dummy();
       }
       // The following sets a default for the previous value
       // TODO: How to handle this better.
-      const witnessPrevious =
-        witness ??
-        new LinkedLeafAndMerkleWitness({
-          merkleWitness: new RollupMerkleTreeWitness({
-            path: [],
-            isLeft: [],
-          }),
-          leaf: new LinkedLeaf({
-            value: Field(0),
-            path: Field(0),
-            nextPath: Field(0),
-          }),
-        });
 
       const newLeaf = {
         value: value,
@@ -242,7 +231,7 @@ export function createLinkedMerkleTree(
       });
       return new LinkedMerkleWitness({
         leafPrevious: witnessPrevious,
-        leafCurrent: witnessNext,
+        leafCurrent: witnessNext.leafCurrent,
       });
     }
 
@@ -268,7 +257,7 @@ export function createLinkedMerkleTree(
      * @param path of the leaf node.
      * @returns The witness that belongs to the leaf.
      */
-    public getWitness(path: bigint): LinkedLeafAndMerkleWitness {
+    public getWitness(path: bigint): LinkedMerkleWitness {
       let currentIndex = this.store.getLeafIndex(path);
       let leaf;
 
@@ -300,12 +289,29 @@ export function createLinkedMerkleTree(
         pathArray.push(sibling);
         currentIndex /= 2n;
       }
+      return new LinkedMerkleWitness({
+        leafPrevious: this.dummy(),
+        leafCurrent: new LinkedLeafAndMerkleWitness({
+          merkleWitness: new RollupMerkleTreeWitness({
+            path: pathArray,
+            isLeft: isLefts,
+          }),
+          leaf: leaf,
+        }),
+      });
+    }
+
+    private dummy(): LinkedLeafAndMerkleWitness {
       return new LinkedLeafAndMerkleWitness({
         merkleWitness: new RollupMerkleTreeWitness({
-          path: pathArray,
-          isLeft: isLefts,
+          path: [],
+          isLeft: [],
         }),
-        leaf: leaf,
+        leaf: new LinkedLeaf({
+          value: Field(0),
+          path: Field(0),
+          nextPath: Field(0),
+        }),
       });
     }
   };

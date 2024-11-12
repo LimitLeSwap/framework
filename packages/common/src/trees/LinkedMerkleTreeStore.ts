@@ -1,4 +1,6 @@
-export interface LinkedMerkleTreeStore {
+import { MerkleTreeStore } from "./MerkleTreeStore";
+
+export interface LinkedMerkleTreeStore extends MerkleTreeStore {
   setNode: (index: bigint, level: number, value: bigint) => void;
 
   getNode: (index: bigint, level: number) => bigint | undefined;

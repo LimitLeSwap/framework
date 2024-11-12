@@ -1,8 +1,8 @@
 import {
   log,
   noop,
-  InMemoryMerkleTreeStorage,
   RollupMerkleTree,
+  InMemoryLinkedMerkleTreeStorage,
 } from "@proto-kit/common";
 
 import {
@@ -12,7 +12,7 @@ import {
 } from "../async/AsyncMerkleTreeStore";
 
 export class CachedMerkleTreeStore
-  extends InMemoryMerkleTreeStorage
+  extends InMemoryLinkedMerkleTreeStorage
   implements AsyncMerkleTreeStore
 {
   private writeCache: {
