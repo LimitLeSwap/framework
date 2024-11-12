@@ -201,23 +201,6 @@ export class StateTransitionProverProgrammable extends ZkProgrammable<
 
     checkLeafValue.assertTrue();
 
-    const membershipValid =
-      merkleWitness.leafCurrent.merkleWitness.checkMembershipSimple(
-        state.stateRoot,
-        Poseidon.hash([
-          transition.from.value,
-          transition.path,
-          merkleWitness.leafCurrent.leaf.nextPath,
-        ])
-      );
-
-    membershipValid.assertTrue(
-      errors.merkleWitnessNotCorrect(
-        index,
-        type.isNormal().toBoolean() ? "normal" : "protocol"
-      )
-    );
-
     // Now for inserting.
 
     merkleWitness.leafPrevious.merkleWitness
