@@ -53,7 +53,7 @@ export interface AbstractLinkedMerkleTree {
    * @param path of the leaf node.
    * @param value New value.
    */
-  setValue(path: bigint, value: bigint): void;
+  setLeaf(path: bigint, value: bigint): void;
 
   /**
    * Returns a leaf which lives at a given path.
@@ -270,7 +270,7 @@ export function createLinkedMerkleTree(
      * @param index Position of the leaf node.
      * @param leaf New value.
      */
-    private setLeaf(index: bigint, leaf: LinkedLeaf) {
+    private setMerkleLeaf(index: bigint, leaf: LinkedLeaf) {
       this.setNode(
         0,
         index,
@@ -294,14 +294,13 @@ export function createLinkedMerkleTree(
      * @param path Position of the leaf node.
      * @param value New value.
      */
-    public setValue(path: bigint, value: bigint) {
+    public setLeaf(path: bigint, value: bigint) {
       let index = this.store.getLeafIndex(path);
       const prevLeaf = this.store.getPathLessOrEqual(path);
       let witnessPrevious;
       if (index === undefined) {
-        // The above means the path doesn't already exist and we are inserting, not updating.
+        // The above means the path doesn't already exist, and we are inserting, not updating.
         // This requires us to update the node with the previous path, as well.
-
         if (this.store.getMaximumIndex() + 1n >= 2 ** height) {
           throw new Error("Index greater than maximum leaf number");
         }
@@ -314,7 +313,7 @@ export function createLinkedMerkleTree(
           nextPath: path,
         };
         this.store.setLeaf(prevLeafIndex, newPrevLeaf);
-        this.setLeaf(prevLeafIndex, {
+        this.setMerkleLeaf(prevLeafIndex, {
           value: Field(newPrevLeaf.value),
           path: Field(newPrevLeaf.path),
           nextPath: Field(newPrevLeaf.nextPath),
@@ -333,7 +332,7 @@ export function createLinkedMerkleTree(
       };
       const witnessNext = this.getWitness(newLeaf.path);
       this.store.setLeaf(index, newLeaf);
-      this.setLeaf(index, {
+      this.setMerkleLeaf(index, {
         value: Field(newLeaf.value),
         path: Field(newLeaf.path),
         nextPath: Field(newLeaf.nextPath),
@@ -356,8 +355,10 @@ export function createLinkedMerkleTree(
         path: 0n,
         nextPath: MAX_FIELD_VALUE,
       });
+      // We do this to get the Field-ified version of the leaf.
       const initialLeaf = this.getLeaf(0n);
-      this.setLeaf(0n, initialLeaf);
+      // We now set the leafs in the merkle tree.
+      this.setMerkleLeaf(0n, initialLeaf);
     }
 
     /**

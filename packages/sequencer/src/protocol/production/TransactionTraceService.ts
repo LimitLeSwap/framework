@@ -323,7 +323,7 @@ export class TransactionTraceService {
         const witness = usedTree.getWitness(provableTransition.path.toBigInt());
 
         if (provableTransition.to.isSome.toBoolean()) {
-          usedTree.setValue(
+          usedTree.setLeaf(
             provableTransition.path.toBigInt(),
             provableTransition.to.value.toBigInt()
           );

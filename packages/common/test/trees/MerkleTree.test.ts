@@ -31,7 +31,7 @@ describe.each([4, 16, 254])("cachedMerkleTree - %s", (height) => {
   it("should have a different root when not empty", () => {
     expect.assertions(1);
 
-    tree.setValue(1n, 1n);
+    tree.setLeaf(1n, 1n);
 
     expect(tree.getRoot().toBigInt()).not.toStrictEqual(
       LinkedMerkleTree.EMPTY_ROOT
@@ -41,8 +41,8 @@ describe.each([4, 16, 254])("cachedMerkleTree - %s", (height) => {
   it("should provide correct witnesses", () => {
     expect.assertions(1);
 
-    tree.setValue(1n, 1n);
-    tree.setValue(5n, 5n);
+    tree.setLeaf(1n, 1n);
+    tree.setLeaf(5n, 5n);
 
     const witness = tree.getWitness(5n).leafCurrent;
 
@@ -62,8 +62,8 @@ describe.each([4, 16, 254])("cachedMerkleTree - %s", (height) => {
   it("should have invalid witnesses with wrong values", () => {
     expect.assertions(1);
 
-    tree.setValue(1n, 1n);
-    tree.setValue(5n, 5n);
+    tree.setLeaf(1n, 1n);
+    tree.setLeaf(5n, 5n);
 
     const witness = tree.getWitness(5n);
 
@@ -75,12 +75,12 @@ describe.each([4, 16, 254])("cachedMerkleTree - %s", (height) => {
   it("should have valid witnesses with changed value on the same leafs", () => {
     expect.assertions(1);
 
-    tree.setValue(1n, 1n);
-    tree.setValue(5n, 5n);
+    tree.setLeaf(1n, 1n);
+    tree.setLeaf(5n, 5n);
 
     const witness = tree.getWitness(5n).leafCurrent;
 
-    tree.setValue(5n, 10n);
+    tree.setLeaf(5n, 10n);
 
     expect(
       witness.merkleWitness
@@ -91,7 +91,7 @@ describe.each([4, 16, 254])("cachedMerkleTree - %s", (height) => {
     ).toStrictEqual(tree.getRoot().toBigInt());
   });
 
-  it("should return zeroNode ", () => {
+  it("should return zeroNode", () => {
     expect.assertions(3);
     const MAX_FIELD_VALUE: bigint = BigInt(2 ** 53 - 1);
     const zeroLeaf = tree.getLeaf(0n);
@@ -99,6 +99,8 @@ describe.each([4, 16, 254])("cachedMerkleTree - %s", (height) => {
     expect(zeroLeaf.path.toBigInt()).toStrictEqual(0n);
     expect(zeroLeaf.nextPath.toBigInt()).toStrictEqual(MAX_FIELD_VALUE);
   });
+
+  it("should return zeroNode", () => {});
 });
 
 // Separate describe here since we only want small trees for this test.
@@ -114,7 +116,7 @@ describe("Error check", () => {
     tree = new LinkedMerkleTree(store);
     expect(() => {
       for (let i = 0; i < 2n ** BigInt(4) + 1n; i++) {
-        tree.setValue(BigInt(i), 2n);
+        tree.setLeaf(BigInt(i), 2n);
       }
     }).toThrow("Index greater than maximum leaf number");
   });
