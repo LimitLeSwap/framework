@@ -1,106 +1,129 @@
 import { beforeEach } from "@jest/globals";
-import { Field } from "o1js";
+import { Field, Poseidon } from "o1js";
 
-import { createMerkleTree, InMemoryMerkleTreeStorage, log } from "../../src";
+import {
+  createLinkedMerkleTree,
+  InMemoryLinkedMerkleTreeStorage,
+  log,
+} from "../../src";
 
 describe.each([4, 16, 256])("cachedMerkleTree - %s", (height) => {
-  class RollupMerkleTree extends createMerkleTree(height) {}
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  class RollupMerkleTreeWitness extends RollupMerkleTree.WITNESS {}
+  class LinkedMerkleTree extends createLinkedMerkleTree(height) {}
 
-  let store: InMemoryMerkleTreeStorage;
-  let tree: RollupMerkleTree;
+  let store: InMemoryLinkedMerkleTreeStorage;
+  let tree: LinkedMerkleTree;
 
   beforeEach(() => {
     log.setLevel("INFO");
 
-    store = new InMemoryMerkleTreeStorage();
-    tree = new RollupMerkleTree(store);
+    store = new InMemoryLinkedMerkleTreeStorage();
+    tree = new LinkedMerkleTree(store);
   });
 
   it("should have the same root when empty", () => {
     expect.assertions(1);
 
     expect(tree.getRoot().toBigInt()).toStrictEqual(
-      RollupMerkleTree.EMPTY_ROOT
+      LinkedMerkleTree.EMPTY_ROOT
     );
   });
 
   it("should have a different root when not empty", () => {
     expect.assertions(1);
 
-    tree.setLeaf(1n, Field(1));
+    tree.setValue(1n, 1n);
 
     expect(tree.getRoot().toBigInt()).not.toStrictEqual(
-      RollupMerkleTree.EMPTY_ROOT
+      LinkedMerkleTree.EMPTY_ROOT
     );
-  });
-
-  it("should have the same root after adding and removing item", () => {
-    expect.assertions(1);
-
-    tree.setLeaf(1n, Field(1));
-
-    const root = tree.getRoot();
-
-    tree.setLeaf(5n, Field(5));
-    tree.setLeaf(5n, Field(0));
-
-    expect(tree.getRoot().toBigInt()).toStrictEqual(root.toBigInt());
   });
 
   it("should provide correct witnesses", () => {
     expect.assertions(1);
 
-    tree.setLeaf(1n, Field(1));
-    tree.setLeaf(5n, Field(5));
+    tree.setValue(1n, 1n);
+    tree.setValue(5n, 5n);
 
-    const witness = tree.getWitness(5n);
+    const witness = tree.getWitness(5n).leafCurrent;
 
-    expect(witness.calculateRoot(Field(5)).toBigInt()).toStrictEqual(
-      tree.getRoot().toBigInt()
-    );
+    expect(
+      witness.merkleWitness
+        .calculateRoot(
+          Poseidon.hash([
+            witness.leaf.value,
+            witness.leaf.path,
+            witness.leaf.nextPath,
+          ])
+        )
+        .toBigInt()
+    ).toStrictEqual(tree.getRoot().toBigInt());
   });
 
   it("should have invalid witnesses with wrong values", () => {
     expect.assertions(1);
 
-    tree.setLeaf(1n, Field(1));
-    tree.setLeaf(5n, Field(5));
+    tree.setValue(1n, 1n);
+    tree.setValue(5n, 5n);
 
     const witness = tree.getWitness(5n);
 
-    expect(witness.calculateRoot(Field(6)).toBigInt()).not.toStrictEqual(
-      tree.getRoot().toBigInt()
-    );
+    expect(
+      witness.leafCurrent.merkleWitness.calculateRoot(Field(6)).toBigInt()
+    ).not.toStrictEqual(tree.getRoot().toBigInt());
   });
 
   it("should have valid witnesses with changed value on the same leafs", () => {
     expect.assertions(1);
 
-    tree.setLeaf(1n, Field(1));
-    tree.setLeaf(5n, Field(5));
+    tree.setValue(1n, 1n);
+    tree.setValue(5n, 5n);
 
-    const witness = tree.getWitness(5n);
+    const witness = tree.getWitness(5n).leafCurrent;
 
-    tree.setLeaf(5n, Field(10));
+    tree.setValue(5n, 10n);
 
-    expect(witness.calculateRoot(Field(10)).toBigInt()).toStrictEqual(
-      tree.getRoot().toBigInt()
-    );
+    expect(
+      witness.merkleWitness
+        .calculateRoot(
+          Poseidon.hash([Field(10), witness.leaf.path, witness.leaf.nextPath])
+        )
+        .toBigInt()
+    ).toStrictEqual(tree.getRoot().toBigInt());
   });
 
-  it("should throw for invalid index", () => {
-    expect.assertions(2);
+  it("should return zeroNode ", () => {
+    expect.assertions(3);
+    const MAX_FIELD_VALUE: bigint = BigInt(2 ** 53 - 1);
+    const zeroLeaf = tree.getLeaf(0n);
+    expect(zeroLeaf.value.toBigInt()).toStrictEqual(0n);
+    expect(zeroLeaf.path.toBigInt()).toStrictEqual(0n);
+    expect(zeroLeaf.nextPath.toBigInt()).toStrictEqual(MAX_FIELD_VALUE);
+  });
 
-    const index = 2n ** BigInt(height) + 1n;
-
+  it("throw for invalid index", () => {
     expect(() => {
-      tree.setLeaf(index, Field(1));
+      for (let i = 0; i < 2n ** BigInt(height) + 1n; i++) {
+        tree.setValue(BigInt(i), 2n);
+      }
     }).toThrow("Index greater than maximum leaf number");
+  });
+});
 
+// Separate describe here since we only want small trees for this test.
+describe("Error check", () => {
+  class LinkedMerkleTree extends createLinkedMerkleTree(4) {}
+  let store: InMemoryLinkedMerkleTreeStorage;
+  let tree: LinkedMerkleTree;
+
+  it("throw for invalid index", () => {
+    log.setLevel("INFO");
+
+    store = new InMemoryLinkedMerkleTreeStorage();
+    tree = new LinkedMerkleTree(store);
     expect(() => {
-      tree.getNode(0, index);
+      for (let i = 0; i < 2n ** BigInt(4) + 1n; i++) {
+        tree.setValue(BigInt(i), 2n);
+      }
     }).toThrow("Index greater than maximum leaf number");
   });
 });
