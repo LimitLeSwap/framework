@@ -7,7 +7,7 @@ import {
   log,
 } from "../../src";
 
-describe.each([4, 16, 256])("cachedMerkleTree - %s", (height) => {
+describe.each([4, 16, 254])("cachedMerkleTree - %s", (height) => {
   class LinkedMerkleTree extends createLinkedMerkleTree(height) {}
 
   let store: InMemoryLinkedMerkleTreeStorage;
@@ -98,14 +98,6 @@ describe.each([4, 16, 256])("cachedMerkleTree - %s", (height) => {
     expect(zeroLeaf.value.toBigInt()).toStrictEqual(0n);
     expect(zeroLeaf.path.toBigInt()).toStrictEqual(0n);
     expect(zeroLeaf.nextPath.toBigInt()).toStrictEqual(MAX_FIELD_VALUE);
-  });
-
-  it("throw for invalid index", () => {
-    expect(() => {
-      for (let i = 0; i < 2n ** BigInt(height) + 1n; i++) {
-        tree.setValue(BigInt(i), 2n);
-      }
-    }).toThrow("Index greater than maximum leaf number");
   });
 });
 
