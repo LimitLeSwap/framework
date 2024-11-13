@@ -349,7 +349,7 @@ export function createLinkedMerkleTree(
      * i.e.  {vale: 0, path: 0, nextPath: Field.Max}
      */
     private setLeafInitialisation() {
-      const MAX_FIELD_VALUE: bigint = BigInt(2 ** 53 - 1);
+      const MAX_FIELD_VALUE: bigint = BigInt(2 ** height - 1);
       this.store.setLeaf(0n, {
         value: 0n,
         path: 0n,
