@@ -129,7 +129,7 @@ export class CachedMerkleTreeStore
   }
 
   // This sets the leaves in the cache and in the in-memory tree.
-  // It also updates the node.
+  // It also updates the relevant node at the base level.
   // Note that setNode doesn't carry the change up the tree (i.e. for siblings etc)
   public setLeaf(index: bigint, leaf: LinkedLeaf) {
     super.setLeaf(index, leaf);
@@ -146,41 +146,54 @@ export class CachedMerkleTreeStore
     );
   }
 
-  // This is basically setLeaf (cache and in-memory) for a list of leaves.
-  // This requires updating the nodes as well.
-  public writeLeaves(leaves: { path: bigint; value: bigint }[]) {
-    leaves.forEach(({ value, path }) => {
-      const index = super.getLeafIndex(path);
-      // The following checks if we have an insert or update.
-      if (index !== undefined) {
-        // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-        const linkedLeaf = super.getLeaf(index) as LinkedLeaf;
-        this.setLeaf(index, {
-          value: value,
-          path: path,
-          nextPath: linkedLeaf.nextPath,
-        });
-      } else {
-        // This is an insert. Need to change two leaves.
-        const nearestLinkedLeaf = super.getPathLessOrEqual(path);
-        // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-        const nearestLinkedleafIndex = super.getLeafIndex(
-          nearestLinkedLeaf.path
-        ) as bigint;
-        const lowestUnoccupiedIndex = super.getMaximumIndex() + 1n;
-        this.setLeaf(nearestLinkedleafIndex, {
-          value: nearestLinkedLeaf.value,
-          path: nearestLinkedLeaf.path,
-          nextPath: path,
-        });
-        this.setLeaf(lowestUnoccupiedIndex, {
-          value: value,
-          path: path,
-          nextPath: nearestLinkedLeaf.path,
-        });
-      }
+  // This is just used in the mergeIntoParent.
+  // It doesn't need any fancy logic and just updates the leaves.
+  // I don't think we need to coordinate this with the nodes
+  // or do any calculations. Just a straight copy and paste.
+  public writeLeaves(leaves: LinkedLeaf[]) {
+    leaves.forEach((leaf) => {
+      // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+      const index = super.getLeafIndex(leaf.path) as bigint;
+      this.writeCache.leaves[index.toString()] = leaf;
+      super.setLeaf(index, leaf);
     });
   }
+  // This is setLeaf (cache and in-memory) for a list of leaves.
+  // It checks if it's an insert or update and then updates the relevant
+  // leaf.
+  // public writeLeaves(leaves: { path: bigint; value: bigint }[]) {
+  //   leaves.forEach(({ value, path }) => {
+  //     const index = super.getLeafIndex(path);
+  //     // The following checks if we have an insert or update.
+  //     if (index !== undefined) {
+  //       // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+  //       const linkedLeaf = super.getLeaf(index) as LinkedLeaf;
+  //       this.setLeaf(index, {
+  //         value: value,
+  //         path: path,
+  //         nextPath: linkedLeaf.nextPath,
+  //       });
+  //     } else {
+  //       // This is an insert. Need to change two leaves.
+  //       const nearestLinkedLeaf = super.getPathLessOrEqual(path);
+  //       // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+  //       const nearestLinkedleafIndex = super.getLeafIndex(
+  //         nearestLinkedLeaf.path
+  //       ) as bigint;
+  //       const lowestUnoccupiedIndex = super.getMaximumIndex() + 1n;
+  //       this.setLeaf(nearestLinkedleafIndex, {
+  //         value: nearestLinkedLeaf.value,
+  //         path: nearestLinkedLeaf.path,
+  //         nextPath: path,
+  //       });
+  //       this.setLeaf(lowestUnoccupiedIndex, {
+  //         value: value,
+  //         path: path,
+  //         nextPath: nearestLinkedLeaf.path,
+  //       });
+  //     }
+  //   });
+  // }
 
   // This gets the nodes from the cache.
   // Only used in mergeIntoParent
@@ -190,6 +203,14 @@ export class CachedMerkleTreeStore
     };
   } {
     return this.writeCache.nodes;
+  }
+
+  // This gets the leaves from the cache.
+  // Only used in mergeIntoParent
+  public getWrittenLeaves(): {
+    [key: string]: LinkedLeaf;
+  } {
+    return this.writeCache.leaves;
   }
 
   // This resets the cache (not the in memory tree).
@@ -279,7 +300,9 @@ export class CachedMerkleTreeStore
 
     await this.parent.openTransaction();
     const nodes = this.getWrittenNodes();
+    const leaves = this.getWrittenLeaves();
 
+    this.writeLeaves(Object.values(leaves));
     const writes = Object.keys(nodes).flatMap((levelString) => {
       const level = Number(levelString);
       return Object.entries(nodes[level]).map<MerkleTreeNode>(

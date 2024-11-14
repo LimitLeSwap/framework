@@ -9,7 +9,7 @@ export interface AsyncLinkedMerkleTreeStore {
 
   writeNodes: (nodes: MerkleTreeNode[]) => void;
 
-  writeLeaves: (leaves: { path: bigint; value: bigint }[]) => void;
+  writeLeaves: (leaves: LinkedLeaf[]) => void;
 
   getNodesAsync: (
     nodes: MerkleTreeNodeQuery[]
