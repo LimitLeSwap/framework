@@ -17,11 +17,12 @@ import {
 import { BatchStorage } from "../../storage/repositories/BatchStorage";
 import { SettleableBatch } from "../../storage/model/Batch";
 import { CachedStateService } from "../../state/state/CachedStateService";
-import { CachedMerkleTreeStore } from "../../state/merkle/CachedMerkleTreeStore";
 import { AsyncStateService } from "../../state/async/AsyncStateService";
 import { AsyncMerkleTreeStore } from "../../state/async/AsyncMerkleTreeStore";
 import { BlockResult, BlockWithResult } from "../../storage/model/Block";
 import { VerificationKeyService } from "../runtime/RuntimeVerificationKeyService";
+import { CachedLinkedMerkleTreeStore } from "../../state/merkle/CachedLinkedMerkleTreeStore";
+import { AsyncLinkedMerkleTreeStore } from "../../state/async/AsyncLinkedMerkleTreeStore";
 
 import { BlockProverParameters } from "./tasks/BlockProvingTask";
 import { StateTransitionProofParameters } from "./tasks/StateTransitionTaskParameters";
@@ -53,7 +54,7 @@ export interface BlockWithPreviousResult {
 interface BatchMetadata {
   batch: SettleableBatch;
   stateService: CachedStateService;
-  merkleStore: CachedMerkleTreeStore;
+  merkleStore: CachedLinkedMerkleTreeStore;
 }
 
 const errors = {
@@ -77,7 +78,7 @@ export class BatchProducerModule extends SequencerModule {
     @inject("AsyncStateService")
     private readonly asyncStateService: AsyncStateService,
     @inject("AsyncMerkleStore")
-    private readonly merkleStore: AsyncMerkleTreeStore,
+    private readonly merkleStore: AsyncLinkedMerkleTreeStore,
     @inject("BatchStorage") private readonly batchStorage: BatchStorage,
     @inject("BlockTreeStore")
     private readonly blockTreeStore: AsyncMerkleTreeStore,
@@ -212,7 +213,7 @@ export class BatchProducerModule extends SequencerModule {
   ): Promise<{
     proof: Proof<BlockProverPublicInput, BlockProverPublicOutput>;
     stateService: CachedStateService;
-    merkleStore: CachedMerkleTreeStore;
+    merkleStore: CachedLinkedMerkleTreeStore;
     fromNetworkState: NetworkState;
     toNetworkState: NetworkState;
   }> {
@@ -222,7 +223,7 @@ export class BatchProducerModule extends SequencerModule {
 
     const stateServices = {
       stateService: new CachedStateService(this.asyncStateService),
-      merkleStore: new CachedMerkleTreeStore(this.merkleStore),
+      merkleStore: new CachedLinkedMerkleTreeStore(this.merkleStore),
     };
 
     const blockTraces: BlockTrace[] = [];

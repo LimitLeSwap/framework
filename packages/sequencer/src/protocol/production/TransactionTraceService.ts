@@ -15,7 +15,6 @@ import chunk from "lodash/chunk";
 import { LinkedMerkleTree } from "@proto-kit/common/dist/trees/LinkedMerkleTree";
 
 import { distinctByString } from "../../helpers/utils";
-import { CachedMerkleTreeStore } from "../../state/merkle/CachedMerkleTreeStore";
 import { CachedStateService } from "../../state/state/CachedStateService";
 import { SyncCachedMerkleTreeStore } from "../../state/merkle/SyncCachedMerkleTreeStore";
 import type {
@@ -24,6 +23,7 @@ import type {
 } from "../../storage/model/Block";
 import { AsyncMerkleTreeStore } from "../../state/async/AsyncMerkleTreeStore";
 import { VerificationKeyService } from "../runtime/RuntimeVerificationKeyService";
+import { CachedLinkedMerkleTreeStore } from "../../state/merkle/CachedLinkedMerkleTreeStore";
 
 import type { TransactionTrace, BlockTrace } from "./BatchProducerModule";
 import { StateTransitionProofParameters } from "./tasks/StateTransitionTaskParameters";
@@ -79,7 +79,7 @@ export class TransactionTraceService {
     traces: TransactionTrace[],
     stateServices: {
       stateService: CachedStateService;
-      merkleStore: CachedMerkleTreeStore;
+      merkleStore: CachedLinkedMerkleTreeStore;
     },
     blockHashTreeStore: AsyncMerkleTreeStore,
     beforeBlockStateRoot: Field,
@@ -172,7 +172,7 @@ export class TransactionTraceService {
     executionResult: TransactionExecutionResult,
     stateServices: {
       stateService: CachedStateService;
-      merkleStore: CachedMerkleTreeStore;
+      merkleStore: CachedLinkedMerkleTreeStore;
     },
     verificationKeyService: VerificationKeyService,
     networkState: NetworkState,
@@ -256,7 +256,7 @@ export class TransactionTraceService {
   }
 
   private async createMerkleTrace(
-    merkleStore: CachedMerkleTreeStore,
+    merkleStore: CachedLinkedMerkleTreeStore,
     stateTransitions: UntypedStateTransition[],
     protocolTransitions: UntypedStateTransition[],
     runtimeSuccess: boolean

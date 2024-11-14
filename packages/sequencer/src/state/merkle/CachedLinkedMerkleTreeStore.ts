@@ -12,7 +12,7 @@ import {
 } from "../async/AsyncMerkleTreeStore";
 import { AsyncLinkedMerkleTreeStore } from "../async/AsyncLinkedMerkleTreeStore";
 
-export class CachedMerkleTreeStore
+export class CachedLinkedMerkleTreeStore
   extends InMemoryLinkedMerkleTreeStorage
   implements AsyncLinkedMerkleTreeStore
 {
