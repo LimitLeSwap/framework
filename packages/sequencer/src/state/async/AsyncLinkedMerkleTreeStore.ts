@@ -1,11 +1,9 @@
-// import { LinkedMerkleTreeStore } from "@proto-kit/common";
-
 import { MerkleTreeNodeQuery } from "./AsyncMerkleTreeStore";
 
-export interface LinkedMerkleTreeNode extends MerkleTreeNodeQuery {
+export interface LinkedMerkleTreeLeaf {
   value: bigint;
-  path: number;
-  nextPath: number;
+  path: bigint;
+  nextPath: bigint;
 }
 
 export interface AsyncLinkedMerkleTreeStore {
@@ -13,9 +11,17 @@ export interface AsyncLinkedMerkleTreeStore {
 
   commit: () => Promise<void>;
 
-  writeNodes: (nodes: LinkedMerkleTreeNode[]) => void;
+  writeNodes: (nodes: MerkleTreeNodeQuery[]) => void;
+
+  writeLeaves: (leaves: LinkedMerkleTreeLeaf[]) => void;
 
   getNodesAsync: (
     nodes: MerkleTreeNodeQuery[]
   ) => Promise<(bigint | undefined)[]>;
+
+  getLeavesAsync: (
+    leaves: LinkedMerkleTreeLeaf[]
+  ) => Promise<
+    ({ value: bigint; path: bigint; nextPath: bigint } | undefined)[]
+  >;
 }
