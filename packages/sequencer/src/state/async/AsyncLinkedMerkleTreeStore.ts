@@ -1,6 +1,6 @@
 import { MerkleTreeNodeQuery } from "./AsyncMerkleTreeStore";
 
-export interface LinkedMerkleTreeLeaf {
+export interface LinkedMerkleTreeLeafQuery {
   value: bigint;
   path: bigint;
   nextPath: bigint;
@@ -13,14 +13,14 @@ export interface AsyncLinkedMerkleTreeStore {
 
   writeNodes: (nodes: MerkleTreeNodeQuery[]) => void;
 
-  writeLeaves: (leaves: LinkedMerkleTreeLeaf[]) => void;
+  writeLeaves: (leaves: LinkedMerkleTreeLeafQuery[]) => void;
 
   getNodesAsync: (
     nodes: MerkleTreeNodeQuery[]
   ) => Promise<(bigint | undefined)[]>;
 
   getLeavesAsync: (
-    leaves: LinkedMerkleTreeLeaf[]
+    leaves: LinkedMerkleTreeLeafQuery[]
   ) => Promise<
     ({ value: bigint; path: bigint; nextPath: bigint } | undefined)[]
   >;
