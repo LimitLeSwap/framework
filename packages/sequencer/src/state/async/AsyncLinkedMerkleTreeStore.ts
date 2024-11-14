@@ -1,27 +1,29 @@
-import { MerkleTreeNodeQuery } from "./AsyncMerkleTreeStore";
+import { LinkedLeaf } from "@proto-kit/common";
 
-export interface LinkedMerkleTreeLeafQuery {
-  value: bigint;
-  path: bigint;
-  nextPath: bigint;
-}
+import { MerkleTreeNode, MerkleTreeNodeQuery } from "./AsyncMerkleTreeStore";
 
 export interface AsyncLinkedMerkleTreeStore {
   openTransaction: () => Promise<void>;
 
   commit: () => Promise<void>;
 
-  writeNodes: (nodes: MerkleTreeNodeQuery[]) => void;
+  writeNodes: (nodes: MerkleTreeNode[]) => void;
 
-  writeLeaves: (leaves: LinkedMerkleTreeLeafQuery[]) => void;
+  writeLeaves: (leaves: { path: bigint; value: bigint }[]) => void;
 
   getNodesAsync: (
     nodes: MerkleTreeNodeQuery[]
   ) => Promise<(bigint | undefined)[]>;
 
   getLeavesAsync: (
-    leaves: LinkedMerkleTreeLeafQuery[]
+    paths: bigint[]
   ) => Promise<
     ({ value: bigint; path: bigint; nextPath: bigint } | undefined)[]
   >;
+
+  getLeafIndex: (path: bigint) => bigint | undefined;
+
+  getPathLessOrEqual: (path: bigint) => LinkedLeaf;
+
+  getMaximumIndex: () => bigint;
 }
