@@ -5,7 +5,6 @@ import {
   InMemoryLinkedMerkleTreeStorage,
   LinkedLeaf,
 } from "@proto-kit/common";
-import { Field, Poseidon } from "o1js";
 
 import {
   MerkleTreeNode,
@@ -128,24 +127,6 @@ export class CachedMerkleTreeStore
     return results;
   }
 
-  // This sets the leaves in the cache and in the in-memory tree.
-  // It also updates the relevant node at the base level.
-  // Note that setNode doesn't carry the change up the tree (i.e. for siblings etc)
-  public setLeaf(index: bigint, leaf: LinkedLeaf) {
-    super.setLeaf(index, leaf);
-    this.writeCache.leaves[index.toString()] = leaf;
-
-    this.setNode(
-      index,
-      0,
-      Poseidon.hash([
-        Field(leaf.value),
-        Field(leaf.path),
-        Field(leaf.nextPath),
-      ]).toBigInt()
-    );
-  }
-
   // This is just used in the mergeIntoParent.
   // It doesn't need any fancy logic and just updates the leaves.
   // I don't think we need to coordinate this with the nodes
@@ -158,6 +139,24 @@ export class CachedMerkleTreeStore
       super.setLeaf(index, leaf);
     });
   }
+
+  // // This sets the leaves in the cache and in the in-memory tree.
+  // // It also updates the relevant node at the base level.
+  // // Note that setNode doesn't carry the change up the tree (i.e. for siblings etc)
+  // public setLeaf(index: bigint, leaf: LinkedLeaf) {
+  //   super.setLeaf(index, leaf);
+  //   this.writeCache.leaves[index.toString()] = leaf;
+  //
+  //   this.setNode(
+  //     index,
+  //     0,
+  //     Poseidon.hash([
+  //       Field(leaf.value),
+  //       Field(leaf.path),
+  //       Field(leaf.nextPath),
+  //     ]).toBigInt()
+  //   );
+  // }
   // This is setLeaf (cache and in-memory) for a list of leaves.
   // It checks if it's an insert or update and then updates the relevant
   // leaf.
@@ -221,7 +220,7 @@ export class CachedMerkleTreeStore
   // Used only in the preloadKeys
   // Basically, gets all of the relevant nodes (and siblings) in the Merkle tree
   // at the various levels required to produce a witness for the given index (at level 0).
-  // But only gets those that aren't in the cache.
+  // But only gets those that aren't already in the cache.
   private collectNodesToFetch(index: bigint) {
     // Algo from RollupMerkleTree.getWitness()
     const { leafCount, HEIGHT } = RollupMerkleTree;
