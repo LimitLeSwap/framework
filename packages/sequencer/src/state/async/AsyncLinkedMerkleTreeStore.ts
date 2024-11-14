@@ -15,11 +15,7 @@ export interface AsyncLinkedMerkleTreeStore {
     nodes: MerkleTreeNodeQuery[]
   ) => Promise<(bigint | undefined)[]>;
 
-  getLeavesAsync: (
-    paths: bigint[]
-  ) => Promise<
-    ({ value: bigint; path: bigint; nextPath: bigint } | undefined)[]
-  >;
+  getLeavesAsync: (paths: bigint[]) => Promise<(LinkedLeaf | undefined)[]>;
 
   getLeafIndex: (path: bigint) => bigint | undefined;
 

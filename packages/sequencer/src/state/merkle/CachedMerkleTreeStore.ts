@@ -239,15 +239,25 @@ export class CachedMerkleTreeStore
   }
 
   // Takes a list of keys and for each key collects the relevant nodes from the
-  // parent tree and sets the node in the cached tree (and in-memory tree).
-  public async preloadKeys(keys: bigint[]) {
-    const nodesToRetrieve = keys.flatMap((key) =>
-      this.collectNodesToFetch(key)
-    );
-
-    const results = await this.parent.getNodesAsync(nodesToRetrieve);
+  // parent tree and sets the leaf and node in the cached tree (and in-memory tree).
+  public async preloadKeys(paths: bigint[]) {
+    const nodesToRetrieve = (
+      await Promise.all(
+        paths.flatMap(async (path) => {
+          const pathIndex = super.getLeafIndex(path) ?? 0n;
+          // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+          const resultLeaf = (
+            await this.parent.getLeavesAsync([path])
+          )[0] as LinkedLeaf;
+          super.setLeaf(pathIndex, resultLeaf);
+          this.writeCache.leaves[pathIndex.toString()] = resultLeaf;
+          return this.collectNodesToFetch(pathIndex);
+        })
+      )
+    ).flat(1);
+    const resultsNode = await this.parent.getNodesAsync(nodesToRetrieve);
     nodesToRetrieve.forEach(({ key, level }, index) => {
-      const value = results[index];
+      const value = resultsNode[index];
       if (value !== undefined) {
         this.setNode(key, level, value);
       }
