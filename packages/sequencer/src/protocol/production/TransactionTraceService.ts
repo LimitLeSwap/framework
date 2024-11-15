@@ -16,7 +16,6 @@ import { LinkedMerkleTree } from "@proto-kit/common/dist/trees/LinkedMerkleTree"
 
 import { distinctByString } from "../../helpers/utils";
 import { CachedStateService } from "../../state/state/CachedStateService";
-import { SyncCachedMerkleTreeStore } from "../../state/merkle/SyncCachedMerkleTreeStore";
 import type {
   TransactionExecutionResult,
   BlockWithResult,
@@ -24,6 +23,7 @@ import type {
 import { AsyncMerkleTreeStore } from "../../state/async/AsyncMerkleTreeStore";
 import { VerificationKeyService } from "../runtime/RuntimeVerificationKeyService";
 import { CachedLinkedMerkleTreeStore } from "../../state/merkle/CachedLinkedMerkleTreeStore";
+import { SyncCachedLinkedMerkleTreeStore } from "../../state/merkle/SyncCachedLinkedMerkleTreeStore";
 
 import type { TransactionTrace, BlockTrace } from "./BatchProducerModule";
 import { StateTransitionProofParameters } from "./tasks/StateTransitionTaskParameters";
@@ -266,7 +266,7 @@ export class TransactionTraceService {
   }> {
     const keys = this.allKeys(protocolTransitions.concat(stateTransitions));
 
-    const runtimeSimulationMerkleStore = new SyncCachedMerkleTreeStore(
+    const runtimeSimulationMerkleStore = new SyncCachedLinkedMerkleTreeStore(
       merkleStore
     );
 
