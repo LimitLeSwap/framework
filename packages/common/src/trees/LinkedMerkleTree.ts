@@ -95,8 +95,8 @@ export function createLinkedMerkleTree(
    */
   // We define the RollupMerkleWitness again here as we want it to have the same height
   // as the tree. If we re-used the Witness from the RollupMerkleTree.ts we wouldn't have
-  // control, whilst having the overhead of creating the RollupTree since the witness is
-  // defined from the tree (for the height reason already described). Since we can't
+  // control, whilst having the overhead of creating the RollupTree, since the witness is
+  // defined from the tree (for the height reason already described).
   class RollupMerkleWitnessV2
     extends Struct({
       path: Provable.Array(Field, height - 1),
