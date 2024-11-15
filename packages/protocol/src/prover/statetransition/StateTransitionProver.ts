@@ -4,7 +4,7 @@ import {
   provableMethod,
   ZkProgrammable,
 } from "@proto-kit/common";
-import { Bool, Field, Poseidon, Provable, SelfProof, ZkProgram } from "o1js";
+import { Field, Poseidon, Provable, SelfProof, ZkProgram } from "o1js";
 import { injectable } from "tsyringe";
 import { LinkedMerkleTreeWitness } from "@proto-kit/common/dist/trees/LinkedMerkleTree";
 
@@ -186,22 +186,28 @@ export class StateTransitionProverProgrammable extends ZkProgrammable<
     merkleWitness: LinkedMerkleTreeWitness,
     index = 0
   ) {
-    // The following checks if an existing path or non-existing path.
+    // The following checks if this is an existing path or non-existing path.
     // It won't be an insert (non-existing) if the 'from' is empty.
-    const checkLeafValue = Provable.if(
+    // If it's an update then the leafCurrent will be the current leaf,
+    // rather than the zero leaf if it's an insert.
+    // If it's an insert then we need to check the leafPrevious is
+    // a valid leaf, i.e. path is less than transition.path and nextPath
+    // greater than transition.path.
+    // Even if we're just reading (rather than writing) then we expect
+    // the path for the current leaf to be populated.
+    Provable.if(
       transition.from.isSome,
-      Bool,
       merkleWitness.leafCurrent.leaf.path.equals(transition.path),
-      merkleWitness.leafCurrent.leaf.path
+      merkleWitness.leafPrevious.leaf.path
         .lessThan(transition.path)
         .and(
           merkleWitness.leafCurrent.leaf.nextPath.greaterThan(transition.path)
         )
-    );
+    ).assertTrue();
 
-    checkLeafValue.assertTrue();
-
-    // Now for inserting.
+    // We need to check the sequencer had fetched the correct previousLeaf,
+    // specifically that the previousLeaf is what is verified.
+    // We check the stateRoot matches. This doesn't matter
     merkleWitness.leafPrevious.merkleWitness
       .checkMembershipSimple(
         state.stateRoot,
@@ -213,8 +219,9 @@ export class StateTransitionProverProgrammable extends ZkProgrammable<
       )
       .assertTrue();
 
-    merkleWitness.leafPrevious.leaf.nextPath.assertGreaterThan(transition.path);
-
+    // Need to calculate the new state root after the previous leaf is changed.
+    // This is only relevant if it's an insert. If an update, we will just use
+    // the existing state root.
     const rootWithLeafChanged =
       merkleWitness.leafPrevious.merkleWitness.calculateRoot(
         Poseidon.hash([
@@ -224,25 +231,27 @@ export class StateTransitionProverProgrammable extends ZkProgrammable<
         ])
       );
 
-    // We now check that whether we have an update or insert.
-    // If insert then we have the current path would be 0.
-    const secondWitness = Provable.if(
+    // Need to check the second leaf is correct, i.e. leafCurrent.
+    // is what the sequencer claims it is.
+    // Again, we check whether we have an update or insert as the value
+    // depends on this. If insert then we have the current path would be 0.
+    // We use the existing state root if it's only an update as the prev leaf
+    // wouldn't have changed and therefore the state root should be the same.
+    Provable.if(
       merkleWitness.leafCurrent.leaf.path.equals(0n),
       merkleWitness.leafCurrent.merkleWitness.checkMembershipSimple(
         rootWithLeafChanged,
         Poseidon.hash([Field(0), Field(0), Field(0)])
       ),
       merkleWitness.leafCurrent.merkleWitness.checkMembershipSimple(
-        rootWithLeafChanged,
+        state.stateRoot,
         Poseidon.hash([
           transition.from.value,
           transition.path,
           merkleWitness.leafCurrent.leaf.nextPath,
         ])
       )
-    );
-
-    secondWitness.assertTrue();
+    ).assertTrue();
 
     // Compute the new final root.
     // For an insert we have to hash the new leaf and use the leafPrev's nextPath
@@ -266,6 +275,8 @@ export class StateTransitionProverProgrammable extends ZkProgrammable<
       )
     );
 
+    // This is checking if we have a read or write.
+    // If a read the state root should stay the same.
     state.stateRoot = Provable.if(
       transition.to.isSome,
       newRoot,
