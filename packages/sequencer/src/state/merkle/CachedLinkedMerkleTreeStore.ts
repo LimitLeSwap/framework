@@ -90,7 +90,7 @@ export class CachedLinkedMerkleTreeStore
   }
 
   // This gets the nodes from the in memory store (which looks also to be the cache).
-  public getLeaf(path: bigint) {
+  private getLeafByPath(path: bigint) {
     const index = super.getLeafIndex(path);
     if (index !== undefined) {
       return super.getLeaf(index);
@@ -107,7 +107,7 @@ export class CachedLinkedMerkleTreeStore
     const toFetch: bigint[] = [];
 
     paths.forEach((path, index) => {
-      const localResult = this.getLeaf(path);
+      const localResult = this.getLeafByPath(path);
       if (localResult !== undefined) {
         results[index] = localResult;
       } else {
