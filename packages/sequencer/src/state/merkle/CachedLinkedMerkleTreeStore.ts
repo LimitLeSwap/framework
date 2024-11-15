@@ -131,12 +131,10 @@ export class CachedLinkedMerkleTreeStore
   // It doesn't need any fancy logic and just updates the leaves.
   // I don't think we need to coordinate this with the nodes
   // or do any calculations. Just a straight copy and paste.
-  public writeLeaves(leaves: LinkedLeaf[]) {
-    leaves.forEach((leaf) => {
-      // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-      const index = super.getLeafIndex(leaf.path) as bigint;
-      this.writeCache.leaves[index.toString()] = leaf;
-      super.setLeaf(index, leaf);
+  public writeLeaves(leaves: [string, LinkedLeaf][]) {
+    leaves.forEach(([key, leaf]) => {
+      this.writeCache.leaves[key] = leaf;
+      super.setLeaf(BigInt(key), leaf);
     });
   }
 
@@ -222,7 +220,6 @@ export class CachedLinkedMerkleTreeStore
   // at the various levels required to produce a witness for the given index (at level 0).
   // But only gets those that aren't already in the cache.
   private collectNodesToFetch(index: bigint) {
-    // Algo from RollupMerkleTree.getWitness()
     const { leafCount, HEIGHT } = RollupMerkleTree;
 
     let currentIndex = index >= leafCount ? index % leafCount : index;
@@ -263,7 +260,7 @@ export class CachedLinkedMerkleTreeStore
   public async preloadKeys(paths: bigint[]) {
     const nodesToRetrieve = (
       await Promise.all(
-        paths.flatMap(async (path) => {
+        paths.map(async (path) => {
           const pathIndex = super.getLeafIndex(path) ?? 0n;
           // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
           const resultLeaf = (
@@ -301,7 +298,7 @@ export class CachedLinkedMerkleTreeStore
     const nodes = this.getWrittenNodes();
     const leaves = this.getWrittenLeaves();
 
-    this.writeLeaves(Object.values(leaves));
+    this.writeLeaves(Object.entries(leaves));
     const writes = Object.keys(nodes).flatMap((levelString) => {
       const level = Number(levelString);
       return Object.entries(nodes[level]).map<MerkleTreeNode>(
