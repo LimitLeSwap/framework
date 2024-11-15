@@ -16,11 +16,11 @@ import {
 } from "../../../sequencer/builder/SequencerModule";
 import { BlockQueue } from "../../../storage/repositories/BlockStorage";
 import { PendingTransaction } from "../../../mempool/PendingTransaction";
-import { AsyncMerkleTreeStore } from "../../../state/async/AsyncMerkleTreeStore";
 import { AsyncStateService } from "../../../state/async/AsyncStateService";
 import { Block, BlockWithResult } from "../../../storage/model/Block";
 import { CachedStateService } from "../../../state/state/CachedStateService";
 import { MessageStorage } from "../../../storage/repositories/MessageStorage";
+import { AsyncLinkedMerkleTreeStore } from "../../../state/async/AsyncLinkedMerkleTreeStore";
 
 import { TransactionExecutionService } from "./TransactionExecutionService";
 
@@ -39,11 +39,11 @@ export class BlockProducerModule extends SequencerModule<BlockConfig> {
     @inject("UnprovenStateService")
     private readonly unprovenStateService: AsyncStateService,
     @inject("UnprovenMerkleStore")
-    private readonly unprovenMerkleStore: AsyncMerkleTreeStore,
+    private readonly unprovenMerkleStore: AsyncLinkedMerkleTreeStore,
     @inject("BlockQueue")
     private readonly blockQueue: BlockQueue,
     @inject("BlockTreeStore")
-    private readonly blockTreeStore: AsyncMerkleTreeStore,
+    private readonly blockTreeStore: AsyncLinkedMerkleTreeStore,
     private readonly executionService: TransactionExecutionService,
     @inject("MethodIdResolver")
     private readonly methodIdResolver: MethodIdResolver,

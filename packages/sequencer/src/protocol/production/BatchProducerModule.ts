@@ -8,7 +8,7 @@ import {
   NetworkState,
 } from "@proto-kit/protocol";
 import { Field, Proof } from "o1js";
-import { log, noop, RollupMerkleTree } from "@proto-kit/common";
+import { LinkedMerkleTree, log, noop } from "@proto-kit/common";
 
 import {
   sequencerModule,
@@ -268,7 +268,7 @@ export class BatchProducerModule extends SequencerModule {
         this.blockTreeStore,
         Field(
           blockWithPreviousResult.lastBlockResult?.stateRoot ??
-            RollupMerkleTree.EMPTY_ROOT
+            LinkedMerkleTree.EMPTY_ROOT
         ),
         blockWithPreviousResult.block
       );

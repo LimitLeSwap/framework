@@ -9,7 +9,7 @@ import { StorageDependencyMinimumDependencies } from "../StorageDependencyFactor
 import { Database } from "../Database";
 
 import { InMemoryBlockStorage } from "./InMemoryBlockStorage";
-import { InMemoryAsyncMerkleTreeStore } from "./InMemoryAsyncMerkleTreeStore";
+import { InMemoryAsyncLinkedMerkleTreeStore } from "./InMemoryAsyncLinkedMerkleTreeStore";
 import { InMemoryBatchStorage } from "./InMemoryBatchStorage";
 import { InMemoryMessageStorage } from "./InMemoryMessageStorage";
 import { InMemorySettlementStorage } from "./InMemorySettlementStorage";
@@ -20,7 +20,7 @@ export class InMemoryDatabase extends SequencerModule implements Database {
   public dependencies(): StorageDependencyMinimumDependencies {
     return {
       asyncMerkleStore: {
-        useClass: InMemoryAsyncMerkleTreeStore,
+        useClass: InMemoryAsyncLinkedMerkleTreeStore,
       },
       asyncStateService: {
         useFactory: () => new CachedStateService(undefined),
@@ -38,10 +38,10 @@ export class InMemoryDatabase extends SequencerModule implements Database {
         useFactory: () => new CachedStateService(undefined),
       },
       unprovenMerkleStore: {
-        useClass: InMemoryAsyncMerkleTreeStore,
+        useClass: InMemoryAsyncLinkedMerkleTreeStore,
       },
       blockTreeStore: {
-        useClass: InMemoryAsyncMerkleTreeStore,
+        useClass: InMemoryAsyncLinkedMerkleTreeStore,
       },
       messageStorage: {
         useClass: InMemoryMessageStorage,

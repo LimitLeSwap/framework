@@ -5,7 +5,7 @@ import {
 } from "@proto-kit/common";
 
 import { AsyncStateService } from "../state/async/AsyncStateService";
-import { AsyncMerkleTreeStore } from "../state/async/AsyncMerkleTreeStore";
+import { AsyncLinkedMerkleTreeStore } from "../state/async/AsyncLinkedMerkleTreeStore";
 
 import { BatchStorage } from "./repositories/BatchStorage";
 import { BlockQueue, BlockStorage } from "./repositories/BlockStorage";
@@ -15,13 +15,13 @@ import { TransactionStorage } from "./repositories/TransactionStorage";
 
 export interface StorageDependencyMinimumDependencies extends DependencyRecord {
   asyncStateService: DependencyDeclaration<AsyncStateService>;
-  asyncMerkleStore: DependencyDeclaration<AsyncMerkleTreeStore>;
+  asyncMerkleStore: DependencyDeclaration<AsyncLinkedMerkleTreeStore>;
   batchStorage: DependencyDeclaration<BatchStorage>;
   blockQueue: DependencyDeclaration<BlockQueue>;
   blockStorage: DependencyDeclaration<BlockStorage>;
   unprovenStateService: DependencyDeclaration<AsyncStateService>;
-  unprovenMerkleStore: DependencyDeclaration<AsyncMerkleTreeStore>;
-  blockTreeStore: DependencyDeclaration<AsyncMerkleTreeStore>;
+  unprovenMerkleStore: DependencyDeclaration<AsyncLinkedMerkleTreeStore>;
+  blockTreeStore: DependencyDeclaration<AsyncLinkedMerkleTreeStore>;
   messageStorage: DependencyDeclaration<MessageStorage>;
   settlementStorage: DependencyDeclaration<SettlementStorage>;
   transactionStorage: DependencyDeclaration<TransactionStorage>;
