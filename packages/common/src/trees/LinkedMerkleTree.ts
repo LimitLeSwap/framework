@@ -349,16 +349,18 @@ export function createLinkedMerkleTree(
      */
     private setLeafInitialisation() {
       // This is the maximum value of the hash
-      const MAX_FIELD_VALUE: bigint = BigInt(2 ** 53 - 1);
-      this.store.setLeaf(0n, {
-        value: 0n,
-        path: 0n,
-        nextPath: MAX_FIELD_VALUE,
-      });
-      // We do this to get the Field-ified version of the leaf.
-      const initialLeaf = this.getLeaf(0n);
-      // We now set the leafs in the merkle tree.
-      this.setMerkleLeaf(0n, initialLeaf);
+      if (this.store.getMaximumIndex() <= 0n) {
+        const MAX_FIELD_VALUE: bigint = BigInt(2 ** 53 - 1);
+        this.store.setLeaf(0n, {
+          value: 0n,
+          path: 0n,
+          nextPath: MAX_FIELD_VALUE,
+        });
+        // We do this to get the Field-ified version of the leaf.
+        const initialLeaf = this.getLeaf(0n);
+        // We now set the leafs in the merkle tree.
+        this.setMerkleLeaf(0n, initialLeaf);
+      }
     }
 
     /**
