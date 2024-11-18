@@ -219,7 +219,12 @@ export function createLinkedMerkleTree(
           Poseidon.hash([previousLevel, previousLevel]).toBigInt()
         );
       }
-      this.setLeafInitialisation();
+      // We only do the leaf initialisation the store
+      // has no values. Otherwise, we leave the store
+      // as is to not overwrite any data.
+      if (this.store.getMaximumIndex() <= 0n) {
+        this.setLeafInitialisation();
+      }
     }
 
     public getNode(level: number, index: bigint): Field {
@@ -349,18 +354,17 @@ export function createLinkedMerkleTree(
      */
     private setLeafInitialisation() {
       // This is the maximum value of the hash
-      if (this.store.getMaximumIndex() <= 0n) {
-        const MAX_FIELD_VALUE: bigint = BigInt(2 ** 53 - 1);
-        this.store.setLeaf(0n, {
-          value: 0n,
-          path: 0n,
-          nextPath: MAX_FIELD_VALUE,
-        });
-        // We do this to get the Field-ified version of the leaf.
-        const initialLeaf = this.getLeaf(0n);
-        // We now set the leafs in the merkle tree.
-        this.setMerkleLeaf(0n, initialLeaf);
-      }
+      const MAX_FIELD_VALUE: bigint = BigInt(2 ** 53 - 1);
+      this.store.setLeaf(0n, {
+        value: 0n,
+        path: 0n,
+        nextPath: MAX_FIELD_VALUE,
+      });
+      // We do this to get the Field-ified version of the leaf.
+      const initialLeaf = this.getLeaf(0n);
+      // We now set the leafs in the merkle tree to cascade the values up
+      // the tree.
+      this.setMerkleLeaf(0n, initialLeaf);
     }
 
     /**
