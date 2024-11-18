@@ -1,7 +1,6 @@
 import {
   log,
   noop,
-  RollupMerkleTree,
   InMemoryLinkedMerkleTreeStorage,
   LinkedLeaf,
 } from "@proto-kit/common";
@@ -133,9 +132,13 @@ export class CachedLinkedMerkleTreeStore
   // or do any calculations. Just a straight copy and paste.
   public writeLeaves(leaves: [string, LinkedLeaf][]) {
     leaves.forEach(([key, leaf]) => {
-      this.writeCache.leaves[key] = leaf;
-      super.setLeaf(BigInt(key), leaf);
+      this.setLeaf(BigInt(key), leaf);
     });
+  }
+
+  public setLeaf(key: bigint, leaf: LinkedLeaf) {
+    this.writeCache.leaves[key.toString()] = leaf;
+    super.setLeaf(BigInt(key), leaf);
   }
 
   // // This sets the leaves in the cache and in the in-memory tree.
@@ -220,7 +223,9 @@ export class CachedLinkedMerkleTreeStore
   // at the various levels required to produce a witness for the given index (at level 0).
   // But only gets those that aren't already in the cache.
   private collectNodesToFetch(index: bigint) {
-    const { leafCount, HEIGHT } = RollupMerkleTree;
+    // This is hardcoded, but should be changed.
+    const HEIGHT = 40n;
+    const leafCount = 2n ** (HEIGHT - 1n);
 
     let currentIndex = index >= leafCount ? index % leafCount : index;
 
@@ -258,20 +263,19 @@ export class CachedLinkedMerkleTreeStore
   // Takes a list of keys and for each key collects the relevant nodes from the
   // parent tree and sets the leaf and node in the cached tree (and in-memory tree).
   public async preloadKeys(paths: bigint[]) {
-    const nodesToRetrieve = (
-      await Promise.all(
-        paths.map(async (path) => {
-          const pathIndex = super.getLeafIndex(path) ?? 0n;
-          // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-          const resultLeaf = (
-            await this.parent.getLeavesAsync([path])
-          )[0] as LinkedLeaf;
-          super.setLeaf(pathIndex, resultLeaf);
-          this.writeCache.leaves[pathIndex.toString()] = resultLeaf;
-          return this.collectNodesToFetch(pathIndex);
-        })
-      )
-    ).flat(1);
+    const nodesToRetrieve = paths.flatMap((path) => {
+      const pathIndex = this.parent.getLeafIndex(path) ?? 0n;
+      return this.collectNodesToFetch(pathIndex);
+    });
+
+    for (const path of paths) {
+      const pathIndex = this.parent.getLeafIndex(path) ?? 0n;
+      const resultLeaf = // eslint-disable-next-line no-await-in-loop,@typescript-eslint/consistent-type-assertions
+        (await this.parent.getLeavesAsync([path]))[0] as LinkedLeaf;
+      super.setLeaf(pathIndex, resultLeaf);
+      this.writeCache.leaves[pathIndex.toString()] = resultLeaf;
+    }
+
     const resultsNode = await this.parent.getNodesAsync(nodesToRetrieve);
     nodesToRetrieve.forEach(({ key, level }, index) => {
       const value = resultsNode[index];
@@ -298,7 +302,7 @@ export class CachedLinkedMerkleTreeStore
     const nodes = this.getWrittenNodes();
     const leaves = this.getWrittenLeaves();
 
-    this.writeLeaves(Object.entries(leaves));
+    this.parent.writeLeaves(Object.entries(leaves));
     const writes = Object.keys(nodes).flatMap((levelString) => {
       const level = Number(levelString);
       return Object.entries(nodes[level]).map<MerkleTreeNode>(

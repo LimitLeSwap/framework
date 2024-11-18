@@ -1,4 +1,4 @@
-import { LinkedMerkleTree } from "@proto-kit/common";
+import { expectDefined, LinkedMerkleTree } from "@proto-kit/common";
 import { beforeEach, expect } from "@jest/globals";
 import { Field, Poseidon } from "o1js";
 
@@ -24,7 +24,7 @@ describe("cached linked merkle store", () => {
   });
 
   it("should cache multiple keys correctly", async () => {
-    expect.assertions(3);
+    expect.assertions(7);
 
     const cache2 = new CachedLinkedMerkleTreeStore(cache1);
     const tree2 = new LinkedMerkleTree(cache2);
@@ -32,15 +32,27 @@ describe("cached linked merkle store", () => {
     tree1.setLeaf(16n, 16n);
     tree1.setLeaf(46n, 46n);
 
-    await cache2.preloadKeys([16n, 46n]);
+    // Need to preload 0n, as well since the nextPath of the leaf would have changed
+    // when other leaves were added.
+    await cache2.preloadKeys([0n, 16n, 46n]);
 
     const leaf1 = tree1.getLeaf(16n);
     const leaf2 = tree1.getLeaf(46n);
 
-    expect(tree2.getNode(0, 16n).toBigInt()).toBe(
+    const leaf1Index = cache2.getLeafIndex(16n);
+    const leaf2Index = cache2.getLeafIndex(46n);
+
+    expectDefined(leaf1Index);
+    expectDefined(leaf2Index);
+
+    // Note that 5n hasn't been loaded so indices are off by 1.
+    expect(leaf1Index).toStrictEqual(1n);
+    expect(leaf2Index).toStrictEqual(2n);
+
+    expect(tree2.getNode(0, leaf1Index).toBigInt()).toBe(
       Poseidon.hash([leaf1.value, leaf1.path, leaf1.nextPath]).toBigInt()
     );
-    expect(tree2.getNode(0, 46n).toBigInt()).toBe(
+    expect(tree2.getNode(0, leaf2Index).toBigInt()).toBe(
       Poseidon.hash([leaf2.value, leaf2.path, leaf2.nextPath]).toBigInt()
     );
 
@@ -52,7 +64,7 @@ describe("cached linked merkle store", () => {
   it("should preload through multiple levels", async () => {
     const cache2 = new CachedLinkedMerkleTreeStore(cache1);
 
-    await cache2.preloadKey(5n);
+    await cache2.preloadKeys([0n, 5n]);
 
     const leaf = tree1.getLeaf(5n);
     expect(cache2.getNode(5n, 0)).toStrictEqual(
