@@ -38,6 +38,18 @@ export class CachedLinkedMerkleTreeStore
     super();
   }
 
+  public static async new(
+    parent: AsyncLinkedMerkleTreeStore
+  ): Promise<CachedLinkedMerkleTreeStore> {
+    // do your async stuff here
+    // now instantiate and return a class
+    const cachedInstance = new CachedLinkedMerkleTreeStore(parent);
+    if (parent.getMaximumIndex() > 0) {
+      await cachedInstance.preloadKey(0n);
+    }
+    return cachedInstance;
+  }
+
   // This gets the nodes from the in memory store (which looks also to be the cache).
   public getNode(key: bigint, level: number): bigint | undefined {
     return super.getNode(key, level);
@@ -141,59 +153,9 @@ export class CachedLinkedMerkleTreeStore
     super.setLeaf(BigInt(key), leaf);
   }
 
-  // // This sets the leaves in the cache and in the in-memory tree.
-  // // It also updates the relevant node at the base level.
-  // // Note that setNode doesn't carry the change up the tree (i.e. for siblings etc)
-  // public setLeaf(index: bigint, leaf: LinkedLeaf) {
-  //   super.setLeaf(index, leaf);
-  //   this.writeCache.leaves[index.toString()] = leaf;
-  //
-  //   this.setNode(
-  //     index,
-  //     0,
-  //     Poseidon.hash([
-  //       Field(leaf.value),
-  //       Field(leaf.path),
-  //       Field(leaf.nextPath),
-  //     ]).toBigInt()
-  //   );
-  // }
-  // This is setLeaf (cache and in-memory) for a list of leaves.
-  // It checks if it's an insert or update and then updates the relevant
-  // leaf.
-  // public writeLeaves(leaves: { path: bigint; value: bigint }[]) {
-  //   leaves.forEach(({ value, path }) => {
-  //     const index = super.getLeafIndex(path);
-  //     // The following checks if we have an insert or update.
-  //     if (index !== undefined) {
-  //       // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-  //       const linkedLeaf = super.getLeaf(index) as LinkedLeaf;
-  //       this.setLeaf(index, {
-  //         value: value,
-  //         path: path,
-  //         nextPath: linkedLeaf.nextPath,
-  //       });
-  //     } else {
-  //       // This is an insert. Need to change two leaves.
-  //       const nearestLinkedLeaf = super.getPathLessOrEqual(path);
-  //       // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-  //       const nearestLinkedleafIndex = super.getLeafIndex(
-  //         nearestLinkedLeaf.path
-  //       ) as bigint;
-  //       const lowestUnoccupiedIndex = super.getMaximumIndex() + 1n;
-  //       this.setLeaf(nearestLinkedleafIndex, {
-  //         value: nearestLinkedLeaf.value,
-  //         path: nearestLinkedLeaf.path,
-  //         nextPath: path,
-  //       });
-  //       this.setLeaf(lowestUnoccupiedIndex, {
-  //         value: value,
-  //         path: path,
-  //         nextPath: nearestLinkedLeaf.path,
-  //       });
-  //     }
-  //   });
-  // }
+  public getLeafByIndex(index: bigint) {
+    return super.getLeaf(index);
+  }
 
   // This gets the nodes from the cache.
   // Only used in mergeIntoParent
@@ -268,21 +230,22 @@ export class CachedLinkedMerkleTreeStore
       return this.collectNodesToFetch(pathIndex);
     });
 
-    for (const path of paths) {
-      const pathIndex = this.parent.getLeafIndex(path) ?? 0n;
-      const resultLeaf = // eslint-disable-next-line no-await-in-loop,@typescript-eslint/consistent-type-assertions
-        (await this.parent.getLeavesAsync([path]))[0] as LinkedLeaf;
-      super.setLeaf(pathIndex, resultLeaf);
-      this.writeCache.leaves[pathIndex.toString()] = resultLeaf;
-    }
-
     const resultsNode = await this.parent.getNodesAsync(nodesToRetrieve);
-    nodesToRetrieve.forEach(({ key, level }, index) => {
+    let index = 0;
+    for (const retrievedNode of nodesToRetrieve) {
+      const { key, level } = retrievedNode;
       const value = resultsNode[index];
       if (value !== undefined) {
         this.setNode(key, level, value);
+        if (level === 0) {
+          // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+          const resultLeaf = this.parent.getLeafByIndex(key) as LinkedLeaf;
+          super.setLeaf(key, resultLeaf);
+          this.writeCache.leaves[key.toString()] = resultLeaf;
+        }
       }
-    });
+      index += 1;
+    }
   }
 
   // This is preloadKeys with just one index/key.

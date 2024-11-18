@@ -13,25 +13,24 @@ describe("cached linked merkle store", () => {
   let tree1: LinkedMerkleTree;
 
   beforeEach(async () => {
-    const cachedStore = new CachedLinkedMerkleTreeStore(mainStore);
+    const cachedStore = await CachedLinkedMerkleTreeStore.new(mainStore);
 
     const tmpTree = new LinkedMerkleTree(cachedStore);
     tmpTree.setLeaf(5n, 10n);
     await cachedStore.mergeIntoParent();
 
-    cache1 = new CachedLinkedMerkleTreeStore(mainStore);
+    cache1 = await CachedLinkedMerkleTreeStore.new(mainStore);
     tree1 = new LinkedMerkleTree(cache1);
   });
 
   it("should cache multiple keys correctly", async () => {
     expect.assertions(7);
 
-    const cache2 = new CachedLinkedMerkleTreeStore(cache1);
-    const tree2 = new LinkedMerkleTree(cache2);
-
     tree1.setLeaf(16n, 16n);
     tree1.setLeaf(46n, 46n);
 
+    const cache2 = await CachedLinkedMerkleTreeStore.new(cache1);
+    const tree2 = new LinkedMerkleTree(cache2);
     // Need to preload 0n, as well since the nextPath of the leaf would have changed
     // when other leaves were added.
     await cache2.preloadKeys([0n, 16n, 46n]);
@@ -45,9 +44,12 @@ describe("cached linked merkle store", () => {
     expectDefined(leaf1Index);
     expectDefined(leaf2Index);
 
-    // Note that 5n hasn't been loaded so indices are off by 1.
-    expect(leaf1Index).toStrictEqual(1n);
-    expect(leaf2Index).toStrictEqual(2n);
+    // The new leaves are at index 2 and 3, as the index 5 is auto-preloaded
+    // as it is next to 0, and 0 is always preloaded as well as any relevant
+    // nodes.
+
+    expect(leaf1Index).toStrictEqual(2n);
+    expect(leaf2Index).toStrictEqual(3n);
 
     expect(tree2.getNode(0, leaf1Index).toBigInt()).toBe(
       Poseidon.hash([leaf1.value, leaf1.path, leaf1.nextPath]).toBigInt()
@@ -62,12 +64,16 @@ describe("cached linked merkle store", () => {
   });
 
   it("should preload through multiple levels", async () => {
-    const cache2 = new CachedLinkedMerkleTreeStore(cache1);
+    const cache2 = await CachedLinkedMerkleTreeStore.new(cache1);
 
     await cache2.preloadKeys([0n, 5n]);
 
     const leaf = tree1.getLeaf(5n);
-    expect(cache2.getNode(5n, 0)).toStrictEqual(
+
+    const leafIndex = cache2.getLeafIndex(5n);
+    expectDefined(leafIndex);
+    expect(leafIndex).toStrictEqual(1n);
+    expect(cache2.getNode(leafIndex, 0)).toStrictEqual(
       Poseidon.hash([leaf.value, leaf.path, leaf.nextPath]).toBigInt()
     );
   });
@@ -120,7 +126,7 @@ describe("cached linked merkle store", () => {
 
     await cache1.mergeIntoParent();
 
-    const cachedStore = new CachedLinkedMerkleTreeStore(mainStore);
+    const cachedStore = await CachedLinkedMerkleTreeStore.new(mainStore);
     await cachedStore.preloadKey(15n);
 
     expect(new LinkedMerkleTree(cachedStore).getRoot().toString()).toBe(
