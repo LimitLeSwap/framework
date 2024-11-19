@@ -182,9 +182,12 @@ export class CachedLinkedMerkleTreeStore
     return this.writeCache.leaves;
   }
 
-  // This gets the leaf with the path equal or just less than
-  // the given path.
-  public async getLeafLessOrEqual(path: bigint): Promise<LinkedLeaf> {
+  // This ensures all the keys needed to be loaded
+  // to find the closest path are loaded.
+  // A bit repetitive as we basically repeat the process
+  // (without the loading) when we find the closest leaf.
+  // TODO: see how we could sue a returned value.
+  public async loadUpKeysForClosestPath(path: bigint): Promise<void> {
     // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
     let largestLeaf = this.getLeaf(0n) as LinkedLeaf;
     while (largestLeaf.nextPath <= path) {
@@ -200,7 +203,6 @@ export class CachedLinkedMerkleTreeStore
       }
       largestLeaf = nextLeaf;
     }
-    return largestLeaf;
   }
 
   // This resets the cache (not the in memory tree).

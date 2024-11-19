@@ -53,7 +53,7 @@ export interface AbstractLinkedMerkleTree {
    * @param path of the leaf node.
    * @param value New value.
    */
-  setLeaf(path: bigint, value: bigint): Promise<LinkedMerkleTreeWitness>;
+  setLeaf(path: bigint, value: bigint): LinkedMerkleTreeWitness;
 
   /**
    * Returns a leaf which lives at a given path.
@@ -300,9 +300,9 @@ export function createLinkedMerkleTree(
      * @param path Position of the leaf node.
      * @param value New value.
      */
-    public async setLeaf(path: bigint, value: bigint) {
+    public setLeaf(path: bigint, value: bigint) {
       let index = this.store.getLeafIndex(path);
-      const prevLeaf = await this.store.getLeafLessOrEqual(path);
+      const prevLeaf = this.store.getLeafLessOrEqual(path);
       let witnessPrevious;
       if (index === undefined) {
         // The above means the path doesn't already exist, and we are inserting, not updating.

@@ -26,8 +26,8 @@ describe("cached linked merkle store", () => {
   it("should cache multiple keys correctly", async () => {
     expect.assertions(10);
 
-    await tree1.setLeaf(16n, 16n);
-    await tree1.setLeaf(46n, 46n);
+    tree1.setLeaf(16n, 16n);
+    tree1.setLeaf(46n, 46n);
 
     const cache2 = await CachedLinkedMerkleTreeStore.new(cache1);
     const tree2 = new LinkedMerkleTree(cache2);
@@ -68,10 +68,10 @@ describe("cached linked merkle store", () => {
   });
 
   it("should preload through multiple levels and insert correctly at right index", async () => {
-    await tree1.setLeaf(10n, 10n);
-    await tree1.setLeaf(11n, 11n);
-    await tree1.setLeaf(12n, 12n);
-    await tree1.setLeaf(13n, 13n);
+    tree1.setLeaf(10n, 10n);
+    tree1.setLeaf(11n, 11n);
+    tree1.setLeaf(12n, 12n);
+    tree1.setLeaf(13n, 13n);
 
     // Nodes 0 and 5 should be auto-preloaded when cache2 is created
     // as 0 is the first and 5 is its sibling. Similarly, 12 and 13
@@ -85,7 +85,8 @@ describe("cached linked merkle store", () => {
     // When we set this leaf the missing nodes are preloaded
     // as when we do a set we have to go through all the leaves to find
     // the one with the nextPath that is suitable
-    await tree2.setLeaf(14n, 14n);
+    await cache2.loadUpKeysForClosestPath(14n);
+    tree2.setLeaf(14n, 14n);
 
     const leaf = tree1.getLeaf(5n);
     const leaf2 = tree2.getLeaf(14n);
@@ -120,12 +121,12 @@ describe("cached linked merkle store", () => {
   });
 
   it("should preload through multiple levels and insert correctly at right index - harder", async () => {
-    await tree1.setLeaf(10n, 10n);
-    await tree1.setLeaf(100n, 100n);
-    await tree1.setLeaf(200n, 200n);
-    await tree1.setLeaf(300n, 300n);
-    await tree1.setLeaf(400n, 400n);
-    await tree1.setLeaf(500n, 500n);
+    tree1.setLeaf(10n, 10n);
+    tree1.setLeaf(100n, 100n);
+    tree1.setLeaf(200n, 200n);
+    tree1.setLeaf(300n, 300n);
+    tree1.setLeaf(400n, 400n);
+    tree1.setLeaf(500n, 500n);
 
     // Nodes 0 and 5 should be auto-preloaded when cache2 is created
     // as 0 is the first and 5 is its sibling. Similarly, 400 and 500
@@ -141,6 +142,7 @@ describe("cached linked merkle store", () => {
     // the one with the nextPath that is suitable and this preloads that are missing before.
     // This means 10n will be preloaded and since 100n is its sibling this will be preloaded, too.
     // Note that the nodes 200n and 300n are not preloaded.
+    await cache2.loadUpKeysForClosestPath(14n);
     await tree2.setLeaf(14n, 14n);
 
     const leaf = tree1.getLeaf(5n);

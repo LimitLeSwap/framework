@@ -59,11 +59,6 @@ export class InMemoryAsyncLinkedMerkleTreeStore
     return this.store.getMaximumIndex();
   }
 
-  // This gets the leaf with the closest path.
-  public getPathLessOrEqual(path: bigint) {
-    return this.store.getPathLessOrEqual(path);
-  }
-
   public getLeafByIndex(index: bigint) {
     return this.store.getLeaf(index);
   }
