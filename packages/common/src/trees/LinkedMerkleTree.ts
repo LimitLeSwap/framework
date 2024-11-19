@@ -238,14 +238,6 @@ export function createLinkedMerkleTree(
      * @returns The data of the node.
      */
     public getLeaf(path: bigint): LinkedLeaf {
-      return this.getPathLessOrEqual(path);
-    }
-
-    /**
-     * Returns the leaf with a path either equal to or less than the path specified.
-     * @param path Position of the leaf node.
-     * */
-    private getPathLessOrEqual(path: bigint): LinkedLeaf {
       const closestLeaf = this.store.getPathLessOrEqual(path);
       return {
         value: Field(closestLeaf.value),
