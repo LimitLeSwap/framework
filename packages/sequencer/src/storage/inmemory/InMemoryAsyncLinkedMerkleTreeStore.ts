@@ -63,4 +63,8 @@ export class InMemoryAsyncLinkedMerkleTreeStore
   public getPathLessOrEqual(path: bigint) {
     return this.store.getPathLessOrEqual(path);
   }
+
+  public getLeafByIndex(index: bigint) {
+    return this.store.getLeaf(index);
+  }
 }

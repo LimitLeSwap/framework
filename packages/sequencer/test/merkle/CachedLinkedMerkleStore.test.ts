@@ -17,6 +17,7 @@ describe("cached linked merkle store", () => {
 
     const tmpTree = new LinkedMerkleTree(cachedStore);
     tmpTree.setLeaf(5n, 10n);
+    // tmpTree.setLeaf(6n, 12n);
     await cachedStore.mergeIntoParent();
 
     cache1 = await CachedLinkedMerkleTreeStore.new(mainStore);
@@ -24,7 +25,7 @@ describe("cached linked merkle store", () => {
   });
 
   it("should cache multiple keys correctly", async () => {
-    expect.assertions(7);
+    expect.assertions(10);
 
     tree1.setLeaf(16n, 16n);
     tree1.setLeaf(46n, 46n);
@@ -35,6 +36,7 @@ describe("cached linked merkle store", () => {
     // when other leaves were added.
     await cache2.preloadKeys([0n, 16n, 46n]);
 
+    const leaf0 = tree1.getLeaf(0n);
     const leaf1 = tree1.getLeaf(16n);
     const leaf2 = tree1.getLeaf(46n);
 
@@ -47,7 +49,6 @@ describe("cached linked merkle store", () => {
     // The new leaves are at index 2 and 3, as the index 5 is auto-preloaded
     // as it is next to 0, and 0 is always preloaded as well as any relevant
     // nodes.
-
     expect(leaf1Index).toStrictEqual(2n);
     expect(leaf2Index).toStrictEqual(3n);
 
@@ -58,6 +59,10 @@ describe("cached linked merkle store", () => {
       Poseidon.hash([leaf2.value, leaf2.path, leaf2.nextPath]).toBigInt()
     );
 
+    expect(tree2.getLeaf(0n)).toEqual(leaf0);
+    expect(tree2.getLeaf(16n)).toEqual(leaf1);
+    expect(tree2.getLeaf(46n)).toEqual(leaf2);
+
     expect(tree2.getRoot().toString()).toStrictEqual(
       tree1.getRoot().toString()
     );
@@ -66,8 +71,8 @@ describe("cached linked merkle store", () => {
   it("should preload through multiple levels", async () => {
     const cache2 = await CachedLinkedMerkleTreeStore.new(cache1);
 
-    await cache2.preloadKeys([0n, 5n]);
-
+    // nodes 0 and 5 should be auto-preloaded when cache2 is created.
+    // We auto-preload 0 whenever the parent cache is already created.
     const leaf = tree1.getLeaf(5n);
 
     const leafIndex = cache2.getLeafIndex(5n);
