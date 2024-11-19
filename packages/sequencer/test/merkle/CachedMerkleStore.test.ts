@@ -34,7 +34,7 @@ describe("cached merkle store", () => {
     tree1.setLeaf(16n, Field(16));
     tree1.setLeaf(46n, Field(46));
 
-    await cache2.preloadKeys([16n, 46n, 5n]);
+    await cache2.preloadKeys([16n, 46n]);
 
     expect(tree2.getNode(0, 16n).toBigInt()).toBe(16n);
     expect(tree2.getNode(0, 46n).toBigInt()).toBe(46n);
