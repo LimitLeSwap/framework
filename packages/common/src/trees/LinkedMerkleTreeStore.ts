@@ -11,7 +11,7 @@ export interface LinkedMerkleTreeStore extends MerkleTreeStore {
 
   getLeafIndex: (path: bigint) => bigint | undefined;
 
-  getPathLessOrEqual: (path: bigint) => LinkedLeaf;
+  getLeafLessOrEqual: (path: bigint) => Promise<LinkedLeaf>;
 
   getMaximumIndex: () => bigint;
 }

@@ -53,10 +53,11 @@ export interface AbstractLinkedMerkleTree {
    * @param path of the leaf node.
    * @param value New value.
    */
-  setLeaf(path: bigint, value: bigint): void;
+  setLeaf(path: bigint, value: bigint): Promise<LinkedMerkleTreeWitness>;
 
   /**
    * Returns a leaf which lives at a given path.
+   * Errors otherwise.
    * @param path Index of the node.
    * @returns The data of the leaf.
    */
@@ -233,12 +234,20 @@ export function createLinkedMerkleTree(
     }
 
     /**
-     * Returns leaf which lives at a given path, or closest path
+     * Returns leaf which lives at a given path.
+     * Errors if the path is not defined.
      * @param path path of the node.
      * @returns The data of the node.
      */
     public getLeaf(path: bigint): LinkedLeaf {
-      const closestLeaf = this.store.getPathLessOrEqual(path);
+      const index = this.store.getLeafIndex(path);
+      if (index === undefined) {
+        throw Error("Path not defined");
+      }
+      const closestLeaf = this.store.getLeaf(index);
+      if (closestLeaf === undefined) {
+        throw Error("Leaf not defined");
+      }
       return {
         value: Field(closestLeaf.value),
         path: Field(closestLeaf.path),
@@ -291,9 +300,9 @@ export function createLinkedMerkleTree(
      * @param path Position of the leaf node.
      * @param value New value.
      */
-    public setLeaf(path: bigint, value: bigint) {
+    public async setLeaf(path: bigint, value: bigint) {
       let index = this.store.getLeafIndex(path);
-      const prevLeaf = this.store.getPathLessOrEqual(path);
+      const prevLeaf = await this.store.getLeafLessOrEqual(path);
       let witnessPrevious;
       if (index === undefined) {
         // The above means the path doesn't already exist, and we are inserting, not updating.

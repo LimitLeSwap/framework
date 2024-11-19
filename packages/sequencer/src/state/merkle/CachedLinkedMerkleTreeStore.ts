@@ -182,6 +182,27 @@ export class CachedLinkedMerkleTreeStore
     return this.writeCache.leaves;
   }
 
+  // This gets the leaf with the path equal or just less than
+  // the given path.
+  public async getLeafLessOrEqual(path: bigint): Promise<LinkedLeaf> {
+    // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+    let largestLeaf = this.getLeaf(0n) as LinkedLeaf;
+    while (largestLeaf.nextPath <= path) {
+      let nextLeaf = this.getLeafByPath(largestLeaf.nextPath);
+      // This means the nextPath wasn't preloaded and we have to load it.
+      if (nextLeaf === undefined) {
+        // eslint-disable-next-line no-await-in-loop
+        await this.preloadKey(largestLeaf.nextPath);
+        nextLeaf = this.getLeafByPath(largestLeaf.nextPath);
+        if (nextLeaf === undefined) {
+          throw Error(" Next Path is defined but not fetched");
+        }
+      }
+      largestLeaf = nextLeaf;
+    }
+    return largestLeaf;
+  }
+
   // This resets the cache (not the in memory tree).
   public resetWrittenTree() {
     this.writeCache = { nodes: {}, leaves: {} };

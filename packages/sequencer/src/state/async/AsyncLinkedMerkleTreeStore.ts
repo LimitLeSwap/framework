@@ -19,8 +19,6 @@ export interface AsyncLinkedMerkleTreeStore {
 
   getLeafIndex: (path: bigint) => bigint | undefined;
 
-  getPathLessOrEqual: (path: bigint) => LinkedLeaf;
-
   getMaximumIndex: () => bigint;
 
   // For the preloadedKeys functionality
