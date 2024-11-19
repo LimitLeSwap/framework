@@ -68,18 +68,50 @@ describe("cached linked merkle store", () => {
     );
   });
 
-  it("should preload through multiple levels", async () => {
-    const cache2 = await CachedLinkedMerkleTreeStore.new(cache1);
+  it("should preload through multiple levels and insert correctly at right index", async () => {
+    tree1.setLeaf(10n, 10n);
+    tree1.setLeaf(11n, 11n);
+    tree1.setLeaf(12n, 12n);
+    tree1.setLeaf(13n, 13n);
 
-    // nodes 0 and 5 should be auto-preloaded when cache2 is created.
+    // Nodes 0 and 5 should be auto-preloaded when cache2 is created
+    // as 0 is the first and 5 is its sibling. Similarly, 12 and 13
+    // should be preloaded as 13 is in the maximum index and 12 is its sibling.
+    // Nodes 10 and 11 shouldn't be preloaded.
     // We auto-preload 0 whenever the parent cache is already created.
-    const leaf = tree1.getLeaf(5n);
 
-    const leafIndex = cache2.getLeafIndex(5n);
-    expectDefined(leafIndex);
-    expect(leafIndex).toStrictEqual(1n);
-    expect(cache2.getNode(leafIndex, 0)).toStrictEqual(
+    const cache2 = await CachedLinkedMerkleTreeStore.new(cache1);
+    const tree2 = new LinkedMerkleTree(cache2);
+
+    tree2.setLeaf(14n, 14n);
+
+    const leaf = tree1.getLeaf(5n);
+    const leaf2 = tree2.getLeaf(14n);
+
+    const leaf5Index = cache2.getLeafIndex(5n);
+    const leaf10Index = cache2.getLeafIndex(10n);
+    const leaf11Index = cache2.getLeafIndex(11n);
+    const leaf12Index = cache2.getLeafIndex(12n);
+    const leaf13Index = cache2.getLeafIndex(13n);
+    const leaf14Index = cache2.getLeafIndex(14n);
+
+    expectDefined(leaf5Index);
+    expect(leaf10Index).toBeNull();
+    expect(leaf11Index).toBeNull();
+    expectDefined(leaf12Index);
+    expectDefined(leaf13Index);
+    expectDefined(leaf14Index);
+
+    expect(leaf5Index).toStrictEqual(1n);
+    expect(leaf12Index).toStrictEqual(4n);
+    expect(leaf13Index).toStrictEqual(5n);
+    expect(leaf14Index).toStrictEqual(6n);
+
+    expect(cache2.getNode(leaf5Index, 0)).toStrictEqual(
       Poseidon.hash([leaf.value, leaf.path, leaf.nextPath]).toBigInt()
+    );
+    expect(cache2.getNode(leaf14Index, 0)).toStrictEqual(
+      Poseidon.hash([leaf2.value, leaf2.path, leaf2.nextPath]).toBigInt()
     );
   });
 

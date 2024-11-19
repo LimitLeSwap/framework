@@ -38,7 +38,14 @@ export class InMemoryLinkedMerkleTreeStorage implements LinkedMerkleTreeStore {
   }
 
   public getMaximumIndex(): bigint {
-    return BigInt(Object.keys(this.leaves).length) - 1n;
+    let max = 0n;
+    Object.keys(this.leaves).forEach((x) => {
+      const key = BigInt(x);
+      if (key > max) {
+        max = key;
+      }
+    });
+    return max;
   }
 
   // This gets the leaf with the closest path.

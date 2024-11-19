@@ -41,11 +41,18 @@ export class CachedLinkedMerkleTreeStore
   public static async new(
     parent: AsyncLinkedMerkleTreeStore
   ): Promise<CachedLinkedMerkleTreeStore> {
-    // do your async stuff here
-    // now instantiate and return a class
     const cachedInstance = new CachedLinkedMerkleTreeStore(parent);
-    if (parent.getMaximumIndex() > 0) {
-      await cachedInstance.preloadKey(0n);
+    const maxIndex = parent.getMaximumIndex();
+    // If the parent is populated then we
+    // load up the first key and the last key.
+    // The last key is to ensure we do not overwrite
+    // any existing paths when we insert a new node/leaf.
+    if (maxIndex > 0) {
+      const leaf = parent.getLeafByIndex(maxIndex);
+      if (leaf === undefined) {
+        throw Error("Max Path is not defined");
+      }
+      await cachedInstance.preloadKeys([0n, leaf.path]);
     }
     return cachedInstance;
   }
@@ -249,8 +256,8 @@ export class CachedLinkedMerkleTreeStore
   }
 
   // This is preloadKeys with just one index/key.
-  public async preloadKey(index: bigint): Promise<void> {
-    await this.preloadKeys([index]);
+  public async preloadKey(path: bigint): Promise<void> {
+    await this.preloadKeys([path]);
   }
 
   // This merges the cache into the parent tree and resets the cache, but not the
