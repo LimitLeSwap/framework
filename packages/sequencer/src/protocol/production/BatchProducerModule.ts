@@ -223,7 +223,7 @@ export class BatchProducerModule extends SequencerModule {
 
     const stateServices = {
       stateService: new CachedStateService(this.asyncStateService),
-      merkleStore: new CachedLinkedMerkleTreeStore(this.merkleStore),
+      merkleStore: await CachedLinkedMerkleTreeStore.new(this.merkleStore),
     };
 
     const blockTraces: BlockTrace[] = [];

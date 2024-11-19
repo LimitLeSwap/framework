@@ -34,7 +34,7 @@ export class CachedLinkedMerkleTreeStore
     noop();
   }
 
-  public constructor(private readonly parent: AsyncLinkedMerkleTreeStore) {
+  private constructor(private readonly parent: AsyncLinkedMerkleTreeStore) {
     super();
   }
 
