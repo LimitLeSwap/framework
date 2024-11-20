@@ -220,7 +220,7 @@ export function createLinkedMerkleTree(
           Poseidon.hash([previousLevel, previousLevel]).toBigInt()
         );
       }
-      // We only do the leaf initialisation the store
+      // We only do the leaf initialisation when the store
       // has no values. Otherwise, we leave the store
       // as is to not overwrite any data.
       if (this.store.getMaximumIndex() <= 0n) {

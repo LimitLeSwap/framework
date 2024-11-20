@@ -16,7 +16,7 @@ describe("cached linked merkle store", () => {
     const cachedStore = await CachedLinkedMerkleTreeStore.new(mainStore);
 
     const tmpTree = new LinkedMerkleTree(cachedStore);
-    await tmpTree.setLeaf(5n, 10n);
+    tmpTree.setLeaf(5n, 10n);
     await cachedStore.mergeIntoParent();
 
     cache1 = await CachedLinkedMerkleTreeStore.new(mainStore);
@@ -183,51 +183,85 @@ describe("cached linked merkle store", () => {
   });
 
   it("should cache correctly", async () => {
-    expect.assertions(9);
+    expect.assertions(12);
 
     const cache2 = new SyncCachedLinkedMerkleTreeStore(cache1);
     const tree2 = new LinkedMerkleTree(cache2);
 
     const leaf1 = tree2.getLeaf(5n);
+    const leaf1Index = cache2.getLeafIndex(5n);
+    expectDefined(leaf1Index);
     await expect(
-      mainStore.getNodesAsync([{ key: 5n, level: 0 }])
+      mainStore.getNodesAsync([{ key: leaf1Index, level: 0 }])
     ).resolves.toStrictEqual([
       Poseidon.hash([leaf1.value, leaf1.path, leaf1.nextPath]).toBigInt(),
     ]);
 
-    await cache1.preloadKey(5n);
-
-    await tree1.setLeaf(10n, 20n);
+    tree1.setLeaf(10n, 20n);
 
     const leaf2 = tree2.getLeaf(10n);
-    expect(tree2.getNode(0, 10n).toBigInt()).toBe(
+    const leaf2Index = cache2.getLeafIndex(10n);
+    expectDefined(leaf2Index);
+    expect(tree2.getNode(0, leaf2Index).toBigInt()).toBe(
       Poseidon.hash([leaf2.value, leaf2.path, leaf2.nextPath]).toBigInt()
     );
 
     const witness = tree2.getWitness(5n);
 
+    // We check tree1 and tree2 have same hash roots.
+    // The witness is from tree2, which comes from cache2,
+    // but which because of the sync is really just cache1.
     expect(
-      witness.leafCurrent.merkleWitness.calculateRoot(Field(10)).toString()
+      witness.leafCurrent.merkleWitness
+        .calculateRoot(
+          Poseidon.hash([
+            witness.leafCurrent.leaf.value,
+            witness.leafCurrent.leaf.path,
+            witness.leafCurrent.leaf.nextPath,
+          ])
+        )
+        .toString()
     ).toBe(tree1.getRoot().toString());
+
     expect(
-      witness.leafCurrent.merkleWitness.calculateRoot(Field(11)).toString()
+      witness.leafCurrent.merkleWitness
+        .calculateRoot(Poseidon.hash([Field(11), Field(5n), Field(10n)]))
+        .toString()
     ).not.toBe(tree1.getRoot().toString());
 
     const witness2 = tree1.getWitness(10n);
 
     expect(
-      witness2.leafCurrent.merkleWitness.calculateRoot(Field(20)).toString()
+      witness2.leafCurrent.merkleWitness
+        .calculateRoot(
+          Poseidon.hash([
+            Field(20),
+            Field(10n),
+            witness2.leafCurrent.leaf.nextPath, // This is the maximum as the the leaf 10n should be the last
+          ])
+        )
+        .toString()
     ).toBe(tree2.getRoot().toString());
 
-    await tree2.setLeaf(15n, 30n);
+    tree2.setLeaf(15n, 30n);
 
+    // Won't be the same as the tree2 works on cache2 and these changes don't
+    // carry up to cache1. Have to merge into parent for this.
     expect(tree1.getRoot().toString()).not.toBe(tree2.getRoot().toString());
 
+    // After this the changes should be merged into the parents, i.e. cache1,
+    // which tree1 has access to.
     cache2.mergeIntoParent();
 
+    const index15 = cache2.getLeafIndex(15n);
+    const leaf15 = tree2.getLeaf(15n);
+    expectDefined(index15);
     expect(tree1.getRoot().toString()).toBe(tree2.getRoot().toString());
-    expect(tree1.getNode(0, 15n).toString()).toBe("30");
+    expect(tree1.getNode(0, index15).toString()).toBe(
+      Poseidon.hash([leaf15.value, leaf15.path, leaf15.nextPath]).toString()
+    );
 
+    // Now the mainstore has the new 15n root.
     await cache1.mergeIntoParent();
 
     const cachedStore = await CachedLinkedMerkleTreeStore.new(mainStore);

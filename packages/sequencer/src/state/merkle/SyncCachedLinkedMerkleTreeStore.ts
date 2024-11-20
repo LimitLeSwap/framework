@@ -5,6 +5,8 @@ import {
   LinkedMerkleTreeStore,
 } from "@proto-kit/common";
 
+// This is mainly used for supporting the rollbacks we need to do in case a runtimemethod fails
+// In this case everything should be preloaded in the parent async service
 export class SyncCachedLinkedMerkleTreeStore extends InMemoryLinkedMerkleTreeStorage {
   public constructor(private readonly parent: LinkedMerkleTreeStore) {
     super();
@@ -26,6 +28,18 @@ export class SyncCachedLinkedMerkleTreeStore extends InMemoryLinkedMerkleTreeSto
     super.setLeaf(index, value);
   }
 
+  // Need to make sure we call the parent as the super will usually be empty
+  // The Tree calls this method.
+  public getLeafIndex(path: bigint): bigint | undefined {
+    return this.parent.getLeafIndex(path);
+  }
+
+  // Need to make sure we call the parent as the super will usually be empty
+  // The tree calls this method.
+  public getMaximumIndex(): bigint {
+    return this.parent.getMaximumIndex();
+  }
+
   public mergeIntoParent() {
     if (Object.keys(this.leaves).length === 0) {
       return;
@@ -33,7 +47,7 @@ export class SyncCachedLinkedMerkleTreeStore extends InMemoryLinkedMerkleTreeSto
 
     const { nodes, leaves } = this;
     Object.entries(leaves).forEach(([key, leaf]) =>
-      this.setLeaf(BigInt(key), leaf)
+      this.parent.setLeaf(BigInt(key), leaf)
     );
     Array.from({ length: LinkedMerkleTree.HEIGHT }).forEach((ignored, level) =>
       Object.entries(nodes[level]).forEach((entry) => {
