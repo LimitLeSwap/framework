@@ -5,7 +5,7 @@ import {
 } from "@proto-kit/sequencer";
 import { DependencyFactory } from "@proto-kit/common";
 
-import { RedisMerkleTreeStore } from "./services/redis/RedisMerkleTreeStore";
+import { RedisLinkedMerkleTreeStore } from "./services/redis/RedisLinkedMerkleTreeStore";
 
 export interface RedisConnectionConfig {
   host: string;
@@ -39,13 +39,13 @@ export class RedisConnectionModule
   > {
     return {
       asyncMerkleStore: {
-        useFactory: () => new RedisMerkleTreeStore(this),
+        useFactory: () => new RedisLinkedMerkleTreeStore(this),
       },
       unprovenMerkleStore: {
-        useFactory: () => new RedisMerkleTreeStore(this, "unproven"),
+        useFactory: () => new RedisLinkedMerkleTreeStore(this, "unproven"),
       },
       blockTreeStore: {
-        useFactory: () => new RedisMerkleTreeStore(this, "blockHash"),
+        useFactory: () => new RedisLinkedMerkleTreeStore(this, "blockHash"),
       },
     };
   }
