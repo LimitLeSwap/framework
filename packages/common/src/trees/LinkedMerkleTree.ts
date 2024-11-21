@@ -61,7 +61,7 @@ export interface AbstractLinkedMerkleTree {
    * @param path Index of the node.
    * @returns The data of the leaf.
    */
-  getLeaf(path: bigint): LinkedLeaf;
+  getLeaf(path: bigint): LinkedLeaf | undefined;
 
   /**
    * Returns the witness (also known as
@@ -223,7 +223,7 @@ export function createLinkedMerkleTree(
       // We only do the leaf initialisation when the store
       // has no values. Otherwise, we leave the store
       // as is to not overwrite any data.
-      if (this.store.getMaximumIndex() <= 0n) {
+      if (this.store.getMaximumIndex() === undefined) {
         this.setLeafInitialisation();
       }
     }
@@ -239,14 +239,14 @@ export function createLinkedMerkleTree(
      * @param path path of the node.
      * @returns The data of the node.
      */
-    public getLeaf(path: bigint): LinkedLeaf {
+    public getLeaf(path: bigint): LinkedLeaf | undefined {
       const index = this.store.getLeafIndex(path);
       if (index === undefined) {
-        throw Error("Path not defined");
+        return undefined;
       }
       const closestLeaf = this.store.getLeaf(index);
       if (closestLeaf === undefined) {
-        throw Error("Leaf not defined");
+        return undefined;
       }
       return {
         value: Field(closestLeaf.value),
@@ -300,14 +300,21 @@ export function createLinkedMerkleTree(
      * @param path Position of the leaf node.
      * @param value New value.
      */
-    public setLeaf(path: bigint, value: bigint) {
+    public setLeaf(path: bigint, value?: bigint) {
+      if (value === undefined) {
+        return this.getWitness(path);
+      }
       let index = this.store.getLeafIndex(path);
       const prevLeaf = this.store.getLeafLessOrEqual(path);
       let witnessPrevious;
       if (index === undefined) {
         // The above means the path doesn't already exist, and we are inserting, not updating.
         // This requires us to update the node with the previous path, as well.
-        if (this.store.getMaximumIndex() + 1n >= 2 ** height) {
+        const tempIndex = this.store.getMaximumIndex();
+        if (tempIndex === undefined) {
+          throw Error("Store Max Index not defined");
+        }
+        if (tempIndex + 1n >= 2 ** height) {
           throw new Error("Index greater than maximum leaf number");
         }
         // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
@@ -324,7 +331,8 @@ export function createLinkedMerkleTree(
           path: Field(newPrevLeaf.path),
           nextPath: Field(newPrevLeaf.nextPath),
         });
-        index = this.store.getMaximumIndex() + 1n;
+
+        index = tempIndex + 1n;
       } else {
         witnessPrevious = this.dummy();
       }
@@ -355,17 +363,22 @@ export function createLinkedMerkleTree(
      */
     private setLeafInitialisation() {
       // This is the maximum value of the hash
-      const MAX_FIELD_VALUE: bigint = BigInt(2 ** 256);
+      const MAX_FIELD_VALUE: bigint = Field.ORDER - 1n;
       this.store.setLeaf(0n, {
         value: 0n,
         path: 0n,
         nextPath: MAX_FIELD_VALUE,
       });
-      // We do this to get the Field-ified version of the leaf.
-      const initialLeaf = this.getLeaf(0n);
       // We now set the leafs in the merkle tree to cascade the values up
       // the tree.
-      this.setMerkleLeaf(0n, initialLeaf);
+      this.setMerkleLeaf(
+        0n,
+        new LinkedLeaf({
+          value: Field(0n),
+          path: Field(0n),
+          nextPath: Field(MAX_FIELD_VALUE),
+        })
+      );
     }
 
     /**
@@ -380,7 +393,11 @@ export function createLinkedMerkleTree(
       let leaf;
 
       if (currentIndex === undefined) {
-        currentIndex = this.store.getMaximumIndex() + 1n;
+        const storeIndex = this.store.getMaximumIndex();
+        if (storeIndex === undefined) {
+          throw new Error("Store Undefined");
+        }
+        currentIndex = storeIndex + 1n;
         leaf = new LinkedLeaf({
           value: Field(0),
           path: Field(0),
@@ -388,6 +405,9 @@ export function createLinkedMerkleTree(
         });
       } else {
         leaf = this.getLeaf(path);
+        if (leaf === undefined) {
+          throw new Error("Leaf is undefined");
+        }
       }
 
       const pathArray = [];

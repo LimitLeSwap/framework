@@ -37,7 +37,10 @@ export class InMemoryLinkedMerkleTreeStorage implements LinkedMerkleTreeStore {
     return BigInt(leafIndex);
   }
 
-  public getMaximumIndex(): bigint {
+  public getMaximumIndex(): bigint | undefined {
+    if (Object.keys(this.leaves).length === 0) {
+      return undefined;
+    }
     let max = 0n;
     Object.keys(this.leaves).forEach((x) => {
       const key = BigInt(x);

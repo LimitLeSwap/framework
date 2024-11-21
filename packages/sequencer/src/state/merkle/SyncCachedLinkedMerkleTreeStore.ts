@@ -31,13 +31,19 @@ export class SyncCachedLinkedMerkleTreeStore extends InMemoryLinkedMerkleTreeSto
   // Need to make sure we call the parent as the super will usually be empty
   // The Tree calls this method.
   public getLeafIndex(path: bigint): bigint | undefined {
-    return this.parent.getLeafIndex(path);
+    return super.getLeafIndex(path) ?? this.parent.getLeafIndex(path);
   }
 
   // Need to make sure we call the parent as the super will usually be empty
   // The tree calls this method.
-  public getMaximumIndex(): bigint {
+  public getMaximumIndex(): bigint | undefined {
     return this.parent.getMaximumIndex();
+  }
+
+  public getLeafLessOrEqual(path: bigint): LinkedLeaf {
+    return (
+      super.getLeafLessOrEqual(path) ?? this.parent.getLeafLessOrEqual(path)
+    );
   }
 
   public mergeIntoParent() {

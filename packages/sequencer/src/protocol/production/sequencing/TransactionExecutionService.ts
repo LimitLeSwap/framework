@@ -25,8 +25,8 @@ import { Bool, Field, Poseidon } from "o1js";
 import {
   AreProofsEnabled,
   log,
-  RollupMerkleTree,
   mapSequential,
+  LinkedMerkleTree,
 } from "@proto-kit/common";
 import {
   MethodParameterEncoder,
@@ -38,8 +38,6 @@ import {
 import { PendingTransaction } from "../../../mempool/PendingTransaction";
 import { CachedStateService } from "../../../state/state/CachedStateService";
 import { distinctByString } from "../../../helpers/utils";
-import { CachedMerkleTreeStore } from "../../../state/merkle/CachedMerkleTreeStore";
-import { AsyncMerkleTreeStore } from "../../../state/async/AsyncMerkleTreeStore";
 import {
   TransactionExecutionResult,
   Block,
@@ -48,6 +46,8 @@ import {
 } from "../../../storage/model/Block";
 import { UntypedStateTransition } from "../helpers/UntypedStateTransition";
 import type { StateRecord } from "../BatchProducerModule";
+import { CachedLinkedMerkleTreeStore } from "../../../state/merkle/CachedLinkedMerkleTreeStore";
+import { AsyncLinkedMerkleTreeStore } from "../../../state/async/AsyncLinkedMerkleTreeStore";
 
 const errors = {
   methodIdNotFound: (methodId: string) =>
@@ -322,8 +322,8 @@ export class TransactionExecutionService {
 
   public async generateMetadataForNextBlock(
     block: Block,
-    merkleTreeStore: AsyncMerkleTreeStore,
-    blockHashTreeStore: AsyncMerkleTreeStore,
+    merkleTreeStore: AsyncLinkedMerkleTreeStore,
+    blockHashTreeStore: AsyncLinkedMerkleTreeStore,
     modifyTreeStore = true
   ): Promise<BlockResult> {
     // Flatten diff list into a single diff by applying them over each other
@@ -339,11 +339,11 @@ export class TransactionExecutionService {
         return Object.assign(accumulator, diff);
       }, {});
 
-    const inMemoryStore = new CachedMerkleTreeStore(merkleTreeStore);
-    const tree = new RollupMerkleTree(inMemoryStore);
-    const blockHashInMemoryStore = new CachedMerkleTreeStore(
-      blockHashTreeStore
-    );
+    const inMemoryStore =
+      await CachedLinkedMerkleTreeStore.new(merkleTreeStore);
+    const tree = new LinkedMerkleTree(inMemoryStore);
+    const blockHashInMemoryStore =
+      await CachedLinkedMerkleTreeStore.new(blockHashTreeStore);
     const blockHashTree = new BlockHashMerkleTree(blockHashInMemoryStore);
 
     await inMemoryStore.preloadKeys(Object.keys(combinedDiff).map(BigInt));
@@ -359,7 +359,7 @@ export class TransactionExecutionService {
 
     Object.entries(combinedDiff).forEach(([key, state]) => {
       const treeValue = state !== undefined ? Poseidon.hash(state) : Field(0);
-      tree.setLeaf(BigInt(key), treeValue);
+      tree.setLeaf(BigInt(key), treeValue.toBigInt());
     });
 
     const stateRoot = tree.getRoot();

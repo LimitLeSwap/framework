@@ -6,6 +6,7 @@ import {
   InMemoryLinkedMerkleTreeStorage,
   log,
 } from "../../src";
+import { expectDefined } from "../../dist/utils";
 
 describe.each([4, 16, 254])("cachedMerkleTree - %s", (height) => {
   class LinkedMerkleTree extends createLinkedMerkleTree(height) {}
@@ -93,13 +94,12 @@ describe.each([4, 16, 254])("cachedMerkleTree - %s", (height) => {
 
   it("should return zeroNode", () => {
     expect.assertions(3);
-    const MAX_FIELD_VALUE: bigint = BigInt(2 ** 256);
+    const MAX_FIELD_VALUE: bigint = Field.ORDER - 1n;
     const zeroLeaf = tree.getLeaf(0n);
+    expectDefined(zeroLeaf);
     expect(zeroLeaf.value.toBigInt()).toStrictEqual(0n);
     expect(zeroLeaf.path.toBigInt()).toStrictEqual(0n);
-    expect(zeroLeaf.nextPath.toBigInt()).toStrictEqual(
-      Field(MAX_FIELD_VALUE).toBigInt()
-    );
+    expect(zeroLeaf.nextPath.toBigInt()).toStrictEqual(MAX_FIELD_VALUE);
   });
 });
 

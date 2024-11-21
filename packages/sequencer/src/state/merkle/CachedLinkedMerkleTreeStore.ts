@@ -47,7 +47,7 @@ export class CachedLinkedMerkleTreeStore
     // load up the first key and the last key.
     // The last key is to ensure we do not overwrite
     // any existing paths when we insert a new node/leaf.
-    if (maxIndex > 0) {
+    if (maxIndex !== undefined) {
       const leaf = parent.getLeafByIndex(maxIndex);
       if (leaf === undefined) {
         throw Error("Max Path is not defined");
@@ -188,7 +188,7 @@ export class CachedLinkedMerkleTreeStore
   // to find the closest path are loaded.
   // A bit repetitive as we basically repeat the process
   // (without the loading) when we find the closest leaf.
-  // TODO: see how we could sue a returned value.
+  // TODO: see how we could use a returned value.
   public async loadUpKeysForClosestPath(path: bigint): Promise<void> {
     // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
     let largestLeaf = this.getLeaf(0n) as LinkedLeaf;

@@ -13,7 +13,7 @@ export interface LinkedMerkleTreeStore extends MerkleTreeStore {
 
   getLeafLessOrEqual: (path: bigint) => LinkedLeaf;
 
-  getMaximumIndex: () => bigint;
+  getMaximumIndex: () => bigint | undefined;
 }
 
 export type LinkedLeaf = { value: bigint; path: bigint; nextPath: bigint };
