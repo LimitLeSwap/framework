@@ -27,8 +27,6 @@ import {
   StateTransitionProverPublicInput,
   StateTransitionProverPublicOutput,
 } from "./StateTransitionProvable";
-import { StateTransitionWitnessProvider } from "./StateTransitionWitnessProvider";
-import { StateTransitionWitnessProviderReference } from "./StateTransitionWitnessProviderReference";
 
 const errors = {
   propertyNotMatching: (property: string, step: string) =>
@@ -64,8 +62,7 @@ export class StateTransitionProverProgrammable extends ZkProgrammable<
   StateTransitionProverPublicOutput
 > {
   public constructor(
-    private readonly stateTransitionProver: StateTransitionProver,
-    public readonly witnessProviderReference: StateTransitionWitnessProviderReference
+    private readonly stateTransitionProver: StateTransitionProver
   ) {
     super();
   }
@@ -132,14 +129,6 @@ export class StateTransitionProverProgrammable extends ZkProgrammable<
     ];
   }
 
-  private get witnessProvider(): StateTransitionWitnessProvider {
-    const provider = this.witnessProviderReference.getWitnessProvider();
-    if (provider === undefined) {
-      throw errors.noWitnessProviderSet();
-    }
-    return provider;
-  }
-
   /**
    * Applies the state transitions to the current stateRoot
    * and returns the new prover state
@@ -168,12 +157,19 @@ export class StateTransitionProverProgrammable extends ZkProgrammable<
 
     const transitions = transitionBatch.batch;
     const types = transitionBatch.transitionTypes;
+    const merkleWitness = transitionBatch.merkleWitnesses;
     for (
       let index = 0;
       index < constants.stateTransitionProverBatchSize;
       index++
     ) {
-      this.applyTransition(state, transitions[index], types[index], index);
+      this.applyTransition(
+        state,
+        transitions[index],
+        types[index],
+        merkleWitness[index],
+        index
+      );
     }
 
     return state;
@@ -187,13 +183,10 @@ export class StateTransitionProverProgrammable extends ZkProgrammable<
     state: StateTransitionProverExecutionState,
     transition: ProvableStateTransition,
     type: ProvableStateTransitionType,
+    merkleWitness: RollupMerkleTreeWitness,
     index = 0
   ) {
-    const witness = Provable.witness(RollupMerkleTreeWitness, () =>
-      this.witnessProvider.getWitness(transition.path)
-    );
-
-    const membershipValid = witness.checkMembership(
+    const membershipValid = merkleWitness.checkMembership(
       state.stateRoot,
       transition.path,
       transition.from.value
@@ -208,7 +201,7 @@ export class StateTransitionProverProgrammable extends ZkProgrammable<
         )
       );
 
-    const newRoot = witness.calculateRoot(transition.to.value);
+    const newRoot = merkleWitness.calculateRoot(transition.to.value);
 
     state.stateRoot = Provable.if(
       transition.to.isSome,
@@ -343,15 +336,9 @@ export class StateTransitionProver
 {
   public zkProgrammable: StateTransitionProverProgrammable;
 
-  public constructor(
-    // Injected
-    public readonly witnessProviderReference: StateTransitionWitnessProviderReference
-  ) {
+  public constructor() {
     super();
-    this.zkProgrammable = new StateTransitionProverProgrammable(
-      this,
-      witnessProviderReference
-    );
+    this.zkProgrammable = new StateTransitionProverProgrammable(this);
   }
 
   public runBatch(
