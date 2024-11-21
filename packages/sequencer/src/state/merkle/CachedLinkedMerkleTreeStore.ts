@@ -53,6 +53,8 @@ export class CachedLinkedMerkleTreeStore
         throw Error("Max Path is not defined");
       }
       await cachedInstance.preloadKeys([0n, leaf.path]);
+    } else {
+      await cachedInstance.preloadKeys([0n]);
     }
     return cachedInstance;
   }

@@ -93,14 +93,14 @@ describe.each([4, 16, 254])("cachedMerkleTree - %s", (height) => {
 
   it("should return zeroNode", () => {
     expect.assertions(3);
-    const MAX_FIELD_VALUE: bigint = BigInt(2 ** 53 - 1);
+    const MAX_FIELD_VALUE: bigint = BigInt(2 ** 256);
     const zeroLeaf = tree.getLeaf(0n);
     expect(zeroLeaf.value.toBigInt()).toStrictEqual(0n);
     expect(zeroLeaf.path.toBigInt()).toStrictEqual(0n);
-    expect(zeroLeaf.nextPath.toBigInt()).toStrictEqual(MAX_FIELD_VALUE);
+    expect(zeroLeaf.nextPath.toBigInt()).toStrictEqual(
+      Field(MAX_FIELD_VALUE).toBigInt()
+    );
   });
-
-  it("should return zeroNode", () => {});
 });
 
 // Separate describe here since we only want small trees for this test.

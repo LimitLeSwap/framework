@@ -355,7 +355,7 @@ export function createLinkedMerkleTree(
      */
     private setLeafInitialisation() {
       // This is the maximum value of the hash
-      const MAX_FIELD_VALUE: bigint = BigInt(2 ** 53 - 1);
+      const MAX_FIELD_VALUE: bigint = BigInt(2 ** 256);
       this.store.setLeaf(0n, {
         value: 0n,
         path: 0n,
