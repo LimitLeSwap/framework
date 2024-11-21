@@ -24,7 +24,7 @@ describe("cached linked merkle store", () => {
   });
 
   it("should cache multiple keys correctly", async () => {
-    expect.assertions(10);
+    expect.assertions(13);
 
     tree1.setLeaf(16n, 16n);
     tree1.setLeaf(46n, 46n);
@@ -38,6 +38,10 @@ describe("cached linked merkle store", () => {
     const leaf0 = tree1.getLeaf(0n);
     const leaf1 = tree1.getLeaf(16n);
     const leaf2 = tree1.getLeaf(46n);
+
+    expectDefined(leaf0);
+    expectDefined(leaf1);
+    expectDefined(leaf2);
 
     const leaf1Index = cache2.getLeafIndex(16n);
     const leaf2Index = cache2.getLeafIndex(46n);
@@ -91,6 +95,9 @@ describe("cached linked merkle store", () => {
     const leaf = tree1.getLeaf(5n);
     const leaf2 = tree2.getLeaf(14n);
 
+    expectDefined(leaf);
+    expectDefined(leaf2);
+
     const leaf5Index = cache2.getLeafIndex(5n);
     const leaf10Index = cache2.getLeafIndex(10n);
     const leaf11Index = cache2.getLeafIndex(11n);
@@ -143,10 +150,13 @@ describe("cached linked merkle store", () => {
     // This means 10n will be preloaded and since 100n is its sibling this will be preloaded, too.
     // Note that the nodes 200n and 300n are not preloaded.
     await cache2.loadUpKeysForClosestPath(14n);
-    await tree2.setLeaf(14n, 14n);
+    tree2.setLeaf(14n, 14n);
 
     const leaf = tree1.getLeaf(5n);
     const leaf2 = tree2.getLeaf(14n);
+
+    expectDefined(leaf);
+    expectDefined(leaf2);
 
     const leaf5Index = cache2.getLeafIndex(5n);
     const leaf10Index = cache2.getLeafIndex(10n);
@@ -183,13 +193,14 @@ describe("cached linked merkle store", () => {
   });
 
   it("should cache correctly", async () => {
-    expect.assertions(12);
+    expect.assertions(15);
 
     const cache2 = new SyncCachedLinkedMerkleTreeStore(cache1);
     const tree2 = new LinkedMerkleTree(cache2);
 
     const leaf1 = tree2.getLeaf(5n);
     const leaf1Index = cache2.getLeafIndex(5n);
+    expectDefined(leaf1);
     expectDefined(leaf1Index);
     await expect(
       mainStore.getNodesAsync([{ key: leaf1Index, level: 0 }])
@@ -201,6 +212,7 @@ describe("cached linked merkle store", () => {
 
     const leaf2 = tree2.getLeaf(10n);
     const leaf2Index = cache2.getLeafIndex(10n);
+    expectDefined(leaf2);
     expectDefined(leaf2Index);
     expect(tree2.getNode(0, leaf2Index).toBigInt()).toBe(
       Poseidon.hash([leaf2.value, leaf2.path, leaf2.nextPath]).toBigInt()
@@ -255,6 +267,7 @@ describe("cached linked merkle store", () => {
 
     const index15 = cache2.getLeafIndex(15n);
     const leaf15 = tree2.getLeaf(15n);
+    expectDefined(leaf15);
     expectDefined(index15);
     expect(tree1.getRoot().toString()).toBe(tree2.getRoot().toString());
     expect(tree1.getNode(0, index15).toString()).toBe(
