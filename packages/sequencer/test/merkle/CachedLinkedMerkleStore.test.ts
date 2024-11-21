@@ -192,6 +192,90 @@ describe("cached linked merkle store", () => {
     expect(tree1.getRoot()).not.toEqual(tree2.getRoot());
   });
 
+  it("mimic transaction execution service", async () => {
+    expect.assertions(20);
+
+    const cache2 = new SyncCachedLinkedMerkleTreeStore(cache1);
+    const treeCache1 = new LinkedMerkleTree(cache1);
+    const treeCache2 = new LinkedMerkleTree(cache2);
+
+    treeCache1.setLeaf(10n, 10n);
+    treeCache1.setLeaf(20n, 20n);
+
+    treeCache2.setLeaf(7n, 7n);
+    cache2.mergeIntoParent();
+
+    const leaves = await cache1.getLeavesAsync([0n, 5n, 7n, 10n, 20n]);
+    expectDefined(leaves[0]);
+    expectDefined(leaves[1]);
+    expectDefined(leaves[2]);
+    expectDefined(leaves[3]);
+    expectDefined(leaves[4]);
+
+    expect(leaves[0]).toEqual({
+      value: 0n,
+      path: 0n,
+      nextPath: 5n,
+    });
+    expect(leaves[1]).toEqual({
+      value: 10n,
+      path: 5n,
+      nextPath: 7n,
+    });
+    expect(leaves[2]).toEqual({
+      value: 7n,
+      path: 7n,
+      nextPath: 10n,
+    });
+    expect(leaves[3]).toEqual({
+      value: 10n,
+      path: 10n,
+      nextPath: 20n,
+    });
+    expect(leaves[4]).toEqual({
+      value: 20n,
+      path: 20n,
+      nextPath: Field.ORDER - 1n,
+    });
+
+    const leaf0Index = cache1.getLeafIndex(0n);
+    const leaf5Index = cache1.getLeafIndex(5n);
+    const leaf7Index = cache1.getLeafIndex(7n);
+    const leaf10Index = cache1.getLeafIndex(10n);
+    const leaf20Index = cache1.getLeafIndex(20n);
+
+    expectDefined(leaf0Index);
+    await expect(
+      cache1.getNodesAsync([{ key: leaf0Index, level: 0 }])
+    ).resolves.toStrictEqual([
+      Poseidon.hash([Field(0), Field(0), Field(5)]).toBigInt(),
+    ]);
+    expectDefined(leaf5Index);
+    await expect(
+      cache1.getNodesAsync([{ key: leaf5Index, level: 0 }])
+    ).resolves.toStrictEqual([
+      Poseidon.hash([Field(10), Field(5), Field(7)]).toBigInt(),
+    ]);
+    expectDefined(leaf7Index);
+    await expect(
+      cache1.getNodesAsync([{ key: leaf7Index, level: 0 }])
+    ).resolves.toStrictEqual([
+      Poseidon.hash([Field(7), Field(7), Field(10)]).toBigInt(),
+    ]);
+    expectDefined(leaf10Index);
+    await expect(
+      cache1.getNodesAsync([{ key: leaf10Index, level: 0 }])
+    ).resolves.toStrictEqual([
+      Poseidon.hash([Field(10), Field(10), Field(20)]).toBigInt(),
+    ]);
+    expectDefined(leaf20Index);
+    await expect(
+      cache1.getNodesAsync([{ key: leaf20Index, level: 0 }])
+    ).resolves.toStrictEqual([
+      Poseidon.hash([Field(20), Field(20), Field(Field.ORDER - 1n)]).toBigInt(),
+    ]);
+  });
+
   it("should cache correctly", async () => {
     expect.assertions(15);
 
@@ -283,5 +367,78 @@ describe("cached linked merkle store", () => {
     expect(new LinkedMerkleTree(cachedStore).getRoot().toString()).toBe(
       tree2.getRoot().toString()
     );
+  });
+
+  it("mimic transaction execution service further", async () => {
+    expect.assertions(16);
+
+    const mStore = new InMemoryAsyncLinkedMerkleTreeStore();
+    const mCache = await CachedLinkedMerkleTreeStore.new(mStore);
+    const mCache2 = new SyncCachedLinkedMerkleTreeStore(mCache);
+    const treeCache1 = new LinkedMerkleTree(mCache);
+    const treeCache2 = new LinkedMerkleTree(mCache2);
+
+    treeCache1.setLeaf(10n, 10n);
+    treeCache1.setLeaf(20n, 20n);
+
+    treeCache2.setLeaf(7n, 7n);
+    mCache2.mergeIntoParent();
+
+    const leaves = await mCache.getLeavesAsync([0n, 7n, 10n, 20n]);
+    expectDefined(leaves[0]);
+    expectDefined(leaves[1]);
+    expectDefined(leaves[2]);
+    expectDefined(leaves[3]);
+
+    expect(leaves[0]).toEqual({
+      value: 0n,
+      path: 0n,
+      nextPath: 7n,
+    });
+    expect(leaves[1]).toEqual({
+      value: 7n,
+      path: 7n,
+      nextPath: 10n,
+    });
+    expect(leaves[2]).toEqual({
+      value: 10n,
+      path: 10n,
+      nextPath: 20n,
+    });
+    expect(leaves[3]).toEqual({
+      value: 20n,
+      path: 20n,
+      nextPath: Field.ORDER - 1n,
+    });
+
+    const leaf0Index = mCache.getLeafIndex(0n);
+    const leaf7Index = mCache.getLeafIndex(7n);
+    const leaf10Index = mCache.getLeafIndex(10n);
+    const leaf20Index = mCache.getLeafIndex(20n);
+
+    expectDefined(leaf0Index);
+    await expect(
+      mCache.getNodesAsync([{ key: leaf0Index, level: 0 }])
+    ).resolves.toStrictEqual([
+      Poseidon.hash([Field(0), Field(0), Field(7)]).toBigInt(),
+    ]);
+    expectDefined(leaf7Index);
+    await expect(
+      mCache.getNodesAsync([{ key: leaf7Index, level: 0 }])
+    ).resolves.toStrictEqual([
+      Poseidon.hash([Field(7), Field(7), Field(10)]).toBigInt(),
+    ]);
+    expectDefined(leaf10Index);
+    await expect(
+      mCache.getNodesAsync([{ key: leaf10Index, level: 0 }])
+    ).resolves.toStrictEqual([
+      Poseidon.hash([Field(10), Field(10), Field(20)]).toBigInt(),
+    ]);
+    expectDefined(leaf20Index);
+    await expect(
+      mCache.getNodesAsync([{ key: leaf20Index, level: 0 }])
+    ).resolves.toStrictEqual([
+      Poseidon.hash([Field(20), Field(20), Field(Field.ORDER - 1n)]).toBigInt(),
+    ]);
   });
 });
