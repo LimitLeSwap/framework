@@ -272,6 +272,14 @@ export class TransactionTraceService {
 
     await merkleStore.preloadKeys(keys.map((key) => key.toBigInt()));
 
+    // // TODO: Not efficient. Try to cache.
+    // for (const stateTransition of stateTransitions) {
+    //   // eslint-disable-next-line no-await-in-loop
+    //   await merkleStore.loadUpKeysForClosestPath(
+    //     stateTransition.path.toBigInt()
+    //   );
+    // }
+
     const tree = new LinkedMerkleTree(merkleStore);
     const runtimeTree = new LinkedMerkleTree(runtimeSimulationMerkleStore);
     // const runtimeTree = new RollupMerkleTree(merkleStore);
@@ -320,10 +328,10 @@ export class TransactionTraceService {
 
         const provableTransition = transition.toProvable();
 
-        const witness = usedTree.getWitness(provableTransition.path.toBigInt());
+        let witness;
 
         if (provableTransition.to.isSome.toBoolean()) {
-          usedTree.setLeaf(
+          witness = usedTree.setLeaf(
             provableTransition.path.toBigInt(),
             provableTransition.to.value.toBigInt()
           );
@@ -332,6 +340,8 @@ export class TransactionTraceService {
           if (StateTransitionType.isProtocol(type)) {
             protocolStateRoot = stateRoot;
           }
+        } else {
+          witness = usedTree.getWitness(provableTransition.path.toBigInt());
         }
 
         // Push transition to respective hashlist
