@@ -196,13 +196,11 @@ export class StateTransitionProverProgrammable extends ZkProgrammable<
     // Even if we're just reading (rather than writing) then we expect
     // the path for the current leaf to be populated.
     Provable.if(
-      transition.from.isSome,
-      merkleWitness.leafCurrent.leaf.path.equals(transition.path),
-      merkleWitness.leafPrevious.leaf.path
-        .lessThan(transition.path)
-        .and(
-          merkleWitness.leafCurrent.leaf.nextPath.greaterThan(transition.path)
-        )
+      merkleWitness.leafPrevious.leaf.nextPath.equals(Field(0)), // nextPath equal to 0 only if it's a dummy., which is when we update
+      merkleWitness.leafCurrent.leaf.path.equals(transition.path), // update
+      merkleWitness.leafPrevious.leaf.path.lessThan(transition.path).and(
+        merkleWitness.leafCurrent.leaf.nextPath.greaterThan(transition.path) // insert
+      )
     ).assertTrue();
 
     // We need to check the sequencer had fetched the correct previousLeaf,
@@ -238,7 +236,7 @@ export class StateTransitionProverProgrammable extends ZkProgrammable<
     // We use the existing state root if it's only an update as the prev leaf
     // wouldn't have changed and therefore the state root should be the same.
     Provable.if(
-      merkleWitness.leafCurrent.leaf.path.equals(0n),
+      merkleWitness.leafCurrent.leaf.nextPath.equals(0n), // this mens an insert
       merkleWitness.leafCurrent.merkleWitness.checkMembershipSimple(
         rootWithLeafChanged,
         Poseidon.hash([Field(0), Field(0), Field(0)])
