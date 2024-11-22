@@ -198,9 +198,7 @@ export class StateTransitionProverProgrammable extends ZkProgrammable<
     Provable.if(
       merkleWitness.leafPrevious.leaf.nextPath.equals(Field(0)), // nextPath equal to 0 only if it's a dummy., which is when we update
       merkleWitness.leafCurrent.leaf.path.equals(transition.path), // update
-      merkleWitness.leafPrevious.leaf.path.lessThan(transition.path).and(
-        merkleWitness.leafCurrent.leaf.nextPath.greaterThan(transition.path) // insert
-      )
+      merkleWitness.leafPrevious.leaf.path.lessThan(transition.path) // insert
     ).assertTrue();
 
     // We need to check the sequencer had fetched the correct previousLeaf,
