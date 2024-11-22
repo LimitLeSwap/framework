@@ -186,10 +186,9 @@ export class StateTransitionProverProgrammable extends ZkProgrammable<
     merkleWitness: LinkedMerkleTreeWitness,
     index = 0
   ) {
-    // The following checks if this is an existing path or non-existing path.
-    // It won't be an insert (non-existing) if the 'from' is empty.
+    // The following checks if this is an update or insert
     // If it's an update then the leafCurrent will be the current leaf,
-    // rather than the zero leaf if it's an insert.
+    // rather than the zero/dummy leaf if it's an insert.
     // If it's an insert then we need to check the leafPrevious is
     // a valid leaf, i.e. path is less than transition.path and nextPath
     // greater than transition.path.
@@ -198,7 +197,11 @@ export class StateTransitionProverProgrammable extends ZkProgrammable<
     Provable.if(
       merkleWitness.leafPrevious.leaf.nextPath.equals(Field(0)), // nextPath equal to 0 only if it's a dummy., which is when we update
       merkleWitness.leafCurrent.leaf.path.equals(transition.path), // update
-      merkleWitness.leafPrevious.leaf.path.lessThan(transition.path) // insert
+      merkleWitness.leafPrevious.leaf.path
+        .lessThan(transition.path)
+        .and(
+          merkleWitness.leafPrevious.leaf.nextPath.greaterThan(transition.path)
+        ) // insert
     ).assertTrue();
 
     // We need to check the sequencer had fetched the correct previousLeaf,
