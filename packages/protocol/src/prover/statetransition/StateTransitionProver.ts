@@ -203,9 +203,20 @@ export class StateTransitionProverProgrammable extends ZkProgrammable<
 
     // We need to check the sequencer had fetched the correct previousLeaf,
     // specifically that the previousLeaf is what is verified.
-    // We check the stateRoot matches. This doesn't matter
-    merkleWitness.leafPrevious.merkleWitness
-      .checkMembershipSimple(
+    // We check the stateRoot matches.
+    // For an insert we the prev leaf is not a dummy,
+    // and for an update the prev leaf is a dummy.
+    Provable.if(
+      merkleWitness.leafPrevious.leaf.nextPath.equals(Field(0)), // nextPath equal to 0 only if it's a dummy., which is when we update
+      merkleWitness.leafCurrent.merkleWitness.checkMembershipSimple(
+        state.stateRoot,
+        Poseidon.hash([
+          merkleWitness.leafCurrent.leaf.value,
+          merkleWitness.leafCurrent.leaf.path,
+          merkleWitness.leafCurrent.leaf.nextPath,
+        ])
+      ),
+      merkleWitness.leafPrevious.merkleWitness.checkMembershipSimple(
         state.stateRoot,
         Poseidon.hash([
           merkleWitness.leafPrevious.leaf.value,
@@ -213,7 +224,7 @@ export class StateTransitionProverProgrammable extends ZkProgrammable<
           merkleWitness.leafPrevious.leaf.nextPath,
         ])
       )
-      .assertTrue();
+    ).assertTrue();
 
     // Need to calculate the new state root after the previous leaf is changed.
     // This is only relevant if it's an insert. If an update, we will just use
@@ -234,7 +245,7 @@ export class StateTransitionProverProgrammable extends ZkProgrammable<
     // We use the existing state root if it's only an update as the prev leaf
     // wouldn't have changed and therefore the state root should be the same.
     Provable.if(
-      merkleWitness.leafCurrent.leaf.nextPath.equals(0n), // this mens an insert
+      merkleWitness.leafCurrent.leaf.nextPath.equals(0n), // this means an insert
       merkleWitness.leafCurrent.merkleWitness.checkMembershipSimple(
         rootWithLeafChanged,
         Poseidon.hash([Field(0), Field(0), Field(0)])
@@ -251,7 +262,7 @@ export class StateTransitionProverProgrammable extends ZkProgrammable<
 
     // Compute the new final root.
     // For an insert we have to hash the new leaf and use the leafPrev's nextPath
-    // For an update we just use the new value, but keep the leafCurrent.s
+    // For an update we just use the new value, but keep the leafCurrents
     // next path the same.
     const newRoot = Provable.if(
       merkleWitness.leafCurrent.leaf.path.equals(0n),
