@@ -158,19 +158,31 @@ export class BlockProducerModule extends SequencerModule<BlockConfig> {
   }> {
     const txs = await this.mempool.getTxs(this.maximumBlockSize());
 
-    const parentBlock = await this.blockQueue.getLatestBlock();
+    const parentBlock = await this.blockQueue.getLatestBlockAndResult();
+
+    let metadata: BlockWithResult;
 
     if (parentBlock === undefined) {
       log.debug(
         "No block metadata given, assuming first block, generating genesis metadata"
       );
+      metadata = BlockWithResult.createEmpty();
+    } else if (parentBlock.result === undefined) {
+      throw new Error(
+        `Metadata for block at height ${parentBlock.block.height.toString()} not available`
+      );
+    } else {
+      metadata = {
+        block: parentBlock.block,
+        // By reconstructing this object, typescript correctly infers the result to be defined
+        result: parentBlock.result,
+      };
     }
 
     const messages = await this.messageStorage.getMessages(
       parentBlock?.block.toMessagesHash.toString() ??
         ACTIONS_EMPTY_HASH.toString()
     );
-    const metadata = parentBlock ?? BlockWithResult.createEmpty();
 
     log.debug(
       `Block collected, ${txs.length} txs, ${messages.length} messages`
@@ -215,6 +227,17 @@ export class BlockProducerModule extends SequencerModule<BlockConfig> {
   }
 
   public async start() {
-    noop();
+    // Check if metadata height is behind block production.
+    // This can happen when the sequencer crashes after a block has been produced
+    // but before the metadata generation has finished
+    const latestBlock = await this.blockQueue.getLatestBlockAndResult();
+    // eslint-disable-next-line sonarjs/no-collapsible-if
+    if (latestBlock !== undefined) {
+      if (latestBlock.result === undefined) {
+        await this.generateMetadata(latestBlock.block);
+      }
+      // Here, the metadata has been computed already
+    }
+    // If we reach here, its a genesis startup, no blocks exist yet
   }
 }
