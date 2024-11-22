@@ -341,7 +341,10 @@ export class TransactionTraceService {
             protocolStateRoot = stateRoot;
           }
         } else {
-          witness = usedTree.getWitness(provableTransition.path.toBigInt());
+          witness = usedTree.setLeaf(
+            provableTransition.path.toBigInt(),
+            undefined
+          );
         }
 
         // Push transition to respective hashlist
