@@ -4,7 +4,7 @@ import {
   provableMethod,
   ZkProgrammable,
 } from "@proto-kit/common";
-import { Field, Poseidon, Provable, SelfProof, ZkProgram } from "o1js";
+import { Bool, Field, Poseidon, Provable, SelfProof, ZkProgram } from "o1js";
 import { injectable } from "tsyringe";
 import { LinkedMerkleTreeWitness } from "@proto-kit/common/dist/trees/LinkedMerkleTree";
 
@@ -186,47 +186,57 @@ export class StateTransitionProverProgrammable extends ZkProgrammable<
     merkleWitness: LinkedMerkleTreeWitness,
     index = 0
   ) {
-    // The following checks if this is an update or insert
-    // If it's an update then the leafCurrent will be the current leaf,
-    // rather than the zero/dummy leaf if it's an insert.
-    // If it's an insert then we need to check the leafPrevious is
-    // a valid leaf, i.e. path is less than transition.path and nextPath
-    // greater than transition.path.
-    // Even if we're just reading (rather than writing) then we expect
-    // the path for the current leaf to be populated.
     Provable.if(
-      merkleWitness.leafPrevious.leaf.nextPath.equals(Field(0)), // nextPath equal to 0 only if it's a dummy., which is when we update
-      merkleWitness.leafCurrent.leaf.path.equals(transition.path), // update
-      merkleWitness.leafPrevious.leaf.path
-        .lessThan(transition.path)
-        .and(
-          merkleWitness.leafPrevious.leaf.nextPath.greaterThan(transition.path)
-        ) // insert
+      transition.from.isSome,
+      // The following checks if this is an update or insert
+      // If it's an update then the leafCurrent will be the current leaf,
+      // rather than the zero/dummy leaf if it's an insert.
+      // If it's an insert then we need to check the leafPrevious is
+      // a valid leaf, i.e. path is less than transition.path and nextPath
+      // greater than transition.path.
+      // Even if we're just reading (rather than writing) then we expect
+      // the path for the current leaf to be populated.
+      Provable.if(
+        merkleWitness.leafPrevious.leaf.nextPath.equals(Field(0)), // nextPath equal to 0 only if it's a dummy., which is when we update
+        merkleWitness.leafCurrent.leaf.path.equals(transition.path), // update
+        merkleWitness.leafPrevious.leaf.path
+          .lessThan(transition.path)
+          .and(
+            merkleWitness.leafPrevious.leaf.nextPath.greaterThan(
+              transition.path
+            )
+          ) // insert
+      ),
+      new Bool(true)
     ).assertTrue();
 
-    // We need to check the sequencer had fetched the correct previousLeaf,
-    // specifically that the previousLeaf is what is verified.
-    // We check the stateRoot matches.
-    // For an insert we the prev leaf is not a dummy,
-    // and for an update the prev leaf is a dummy.
     Provable.if(
-      merkleWitness.leafPrevious.leaf.nextPath.equals(Field(0)), // nextPath equal to 0 only if it's a dummy., which is when we update
-      merkleWitness.leafCurrent.merkleWitness.checkMembershipSimple(
-        state.stateRoot,
-        Poseidon.hash([
-          merkleWitness.leafCurrent.leaf.value,
-          merkleWitness.leafCurrent.leaf.path,
-          merkleWitness.leafCurrent.leaf.nextPath,
-        ])
+      transition.from.isSome,
+      // We need to check the sequencer had fetched the correct previousLeaf,
+      // specifically that the previousLeaf is what is verified.
+      // We check the stateRoot matches.
+      // For an insert we the prev leaf is not a dummy,
+      // and for an update the prev leaf is a dummy.
+      Provable.if(
+        merkleWitness.leafPrevious.leaf.nextPath.equals(Field(0)), // nextPath equal to 0 only if it's a dummy., which is when we update
+        merkleWitness.leafCurrent.merkleWitness.checkMembershipSimple(
+          state.stateRoot,
+          Poseidon.hash([
+            merkleWitness.leafCurrent.leaf.value,
+            merkleWitness.leafCurrent.leaf.path,
+            merkleWitness.leafCurrent.leaf.nextPath,
+          ])
+        ),
+        merkleWitness.leafPrevious.merkleWitness.checkMembershipSimple(
+          state.stateRoot,
+          Poseidon.hash([
+            merkleWitness.leafPrevious.leaf.value,
+            merkleWitness.leafPrevious.leaf.path,
+            merkleWitness.leafPrevious.leaf.nextPath,
+          ])
+        )
       ),
-      merkleWitness.leafPrevious.merkleWitness.checkMembershipSimple(
-        state.stateRoot,
-        Poseidon.hash([
-          merkleWitness.leafPrevious.leaf.value,
-          merkleWitness.leafPrevious.leaf.path,
-          merkleWitness.leafPrevious.leaf.nextPath,
-        ])
-      )
+      new Bool(true)
     ).assertTrue();
 
     // Need to calculate the new state root after the previous leaf is changed.
@@ -241,26 +251,30 @@ export class StateTransitionProverProgrammable extends ZkProgrammable<
         ])
       );
 
-    // Need to check the second leaf is correct, i.e. leafCurrent.
-    // is what the sequencer claims it is.
-    // Again, we check whether we have an update or insert as the value
-    // depends on this. If insert then we have the current path would be 0.
-    // We use the existing state root if it's only an update as the prev leaf
-    // wouldn't have changed and therefore the state root should be the same.
     Provable.if(
-      merkleWitness.leafCurrent.leaf.nextPath.equals(0n), // this means an insert
-      merkleWitness.leafCurrent.merkleWitness.checkMembershipSimple(
-        rootWithLeafChanged,
-        Field(0n)
+      transition.from.isSome,
+      // Need to check the second leaf is correct, i.e. leafCurrent.
+      // is what the sequencer claims it is.
+      // Again, we check whether we have an update or insert as the value
+      // depends on this. If insert then we have the current path would be 0.
+      // We use the existing state root if it's only an update as the prev leaf
+      // wouldn't have changed and therefore the state root should be the same.
+      Provable.if(
+        merkleWitness.leafCurrent.leaf.nextPath.equals(0n), // this means an insert
+        merkleWitness.leafCurrent.merkleWitness.checkMembershipSimple(
+          rootWithLeafChanged,
+          Field(0n)
+        ),
+        merkleWitness.leafCurrent.merkleWitness.checkMembershipSimple(
+          state.stateRoot,
+          Poseidon.hash([
+            transition.from.value,
+            transition.path,
+            merkleWitness.leafCurrent.leaf.nextPath,
+          ])
+        )
       ),
-      merkleWitness.leafCurrent.merkleWitness.checkMembershipSimple(
-        state.stateRoot,
-        Poseidon.hash([
-          transition.from.value,
-          transition.path,
-          merkleWitness.leafCurrent.leaf.nextPath,
-        ])
-      )
+      new Bool(true)
     ).assertTrue();
 
     // Compute the new final root.

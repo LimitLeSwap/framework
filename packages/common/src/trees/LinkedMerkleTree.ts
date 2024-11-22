@@ -442,8 +442,10 @@ export function createLinkedMerkleTree(
     private dummy(): LinkedLeafAndMerkleWitness {
       return new LinkedLeafAndMerkleWitness({
         merkleWitness: new RollupMerkleTreeWitness({
-          path: [],
-          isLeft: [],
+          // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+          path: Array(40).fill(Field(0)) as Field[],
+          // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+          isLeft: Array(40).fill(new Bool(true)) as Bool[],
         }),
         leaf: new LinkedLeaf({
           value: Field(0),
