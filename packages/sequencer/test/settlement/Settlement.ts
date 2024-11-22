@@ -1,5 +1,10 @@
 /* eslint-disable no-inner-declarations */
-import { log, mapSequential, RollupMerkleTree } from "@proto-kit/common";
+import {
+  expectDefined,
+  log,
+  mapSequential,
+  RollupMerkleTree,
+} from "@proto-kit/common";
 import { VanillaProtocolModules } from "@proto-kit/library";
 import { Runtime } from "@proto-kit/module";
 import {
@@ -277,7 +282,7 @@ export const settlementTestFn = (
           RollupMerkleTree.EMPTY_ROOT
         );
 
-        const lastBlock = await blockQueue.getLatestBlock();
+        const lastBlock = await blockQueue.getLatestBlockAndResult();
 
         await trigger.settle(batch!);
         nonceCounter++;
@@ -287,14 +292,16 @@ export const settlementTestFn = (
         console.log("Block settled");
 
         const { settlement } = settlementModule.getContracts();
+        expectDefined(lastBlock);
+        expectDefined(lastBlock.result);
         expect(settlement.networkStateHash.get().toBigInt()).toStrictEqual(
-          lastBlock!.result.afterNetworkState.hash().toBigInt()
+          lastBlock.result.afterNetworkState.hash().toBigInt()
         );
         expect(settlement.stateRoot.get().toBigInt()).toStrictEqual(
-          lastBlock!.result.stateRoot
+          lastBlock.result.stateRoot
         );
         expect(settlement.blockHashRoot.get().toBigInt()).toStrictEqual(
-          lastBlock!.result.blockHashRoot
+          lastBlock.result.blockHashRoot
         );
       },
       timeout

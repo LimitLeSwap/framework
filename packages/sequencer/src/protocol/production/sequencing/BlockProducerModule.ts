@@ -1,5 +1,5 @@
 import { inject } from "tsyringe";
-import { log, noop } from "@proto-kit/common";
+import { log } from "@proto-kit/common";
 import { ACTIONS_EMPTY_HASH } from "@proto-kit/protocol";
 import {
   MethodIdResolver,
