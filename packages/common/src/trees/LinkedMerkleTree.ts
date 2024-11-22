@@ -53,7 +53,7 @@ export interface AbstractLinkedMerkleTree {
    * @param path of the leaf node.
    * @param value New value.
    */
-  setLeaf(path: bigint, value: bigint): LinkedMerkleTreeWitness;
+  setLeaf(path: bigint, value?: bigint): LinkedMerkleTreeWitness;
 
   /**
    * Returns a leaf which lives at a given path.

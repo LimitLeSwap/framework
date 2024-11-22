@@ -251,7 +251,7 @@ export class StateTransitionProverProgrammable extends ZkProgrammable<
       merkleWitness.leafCurrent.leaf.nextPath.equals(0n), // this means an insert
       merkleWitness.leafCurrent.merkleWitness.checkMembershipSimple(
         rootWithLeafChanged,
-        Poseidon.hash([Field(0), Field(0), Field(0)])
+        Field(0n)
       ),
       merkleWitness.leafCurrent.merkleWitness.checkMembershipSimple(
         state.stateRoot,
