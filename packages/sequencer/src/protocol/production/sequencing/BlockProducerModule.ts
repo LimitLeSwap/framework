@@ -18,7 +18,11 @@ import { BlockQueue } from "../../../storage/repositories/BlockStorage";
 import { PendingTransaction } from "../../../mempool/PendingTransaction";
 import { AsyncMerkleTreeStore } from "../../../state/async/AsyncMerkleTreeStore";
 import { AsyncStateService } from "../../../state/async/AsyncStateService";
-import { Block, BlockWithResult } from "../../../storage/model/Block";
+import {
+  Block,
+  BlockResult,
+  BlockWithResult,
+} from "../../../storage/model/Block";
 import { CachedStateService } from "../../../state/state/CachedStateService";
 import { MessageStorage } from "../../../storage/repositories/MessageStorage";
 
@@ -99,7 +103,23 @@ export class BlockProducerModule extends SequencerModule<BlockConfig> {
     }
   }
 
-  public async tryProduceBlock(): Promise<BlockWithResult | undefined> {
+  public async generateMetadata(block: Block): Promise<BlockResult> {
+    const { result, blockHashTreeStore, treeStore } =
+      await this.executionService.generateMetadataForNextBlock(
+        block,
+        this.unprovenMerkleStore,
+        this.blockTreeStore
+      );
+
+    await blockHashTreeStore.mergeIntoParent();
+    await treeStore.mergeIntoParent();
+
+    await this.blockQueue.pushResult(result);
+
+    return result;
+  }
+
+  public async tryProduceBlock(): Promise<Block | undefined> {
     if (!this.productionInProgress) {
       try {
         const block = await this.produceBlock();
@@ -118,20 +138,7 @@ export class BlockProducerModule extends SequencerModule<BlockConfig> {
         );
         this.prettyPrintBlockContents(block);
 
-        // Generate metadata for next block
-
-        // TODO: make async of production in the future
-        const result = await this.executionService.generateMetadataForNextBlock(
-          block,
-          this.unprovenMerkleStore,
-          this.blockTreeStore,
-          true
-        );
-
-        return {
-          block,
-          result,
-        };
+        return block;
       } catch (error: unknown) {
         if (error instanceof Error) {
           throw error;
@@ -196,7 +203,11 @@ export class BlockProducerModule extends SequencerModule<BlockConfig> {
       this.allowEmptyBlock()
     );
 
-    await cachedStateService.mergeIntoParent();
+    if (block !== undefined) {
+      await cachedStateService.mergeIntoParent();
+
+      await this.blockQueue.pushBlock(block);
+    }
 
     this.productionInProgress = false;
 
