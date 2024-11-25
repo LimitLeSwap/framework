@@ -266,6 +266,8 @@ export class TransactionTraceService {
   }> {
     const keys = this.allKeys(protocolTransitions.concat(stateTransitions));
 
+    // TODO Consolidate
+    await merkleStore.preloadKey(0n);
     const runtimeSimulationMerkleStore = new SyncCachedLinkedMerkleTreeStore(
       merkleStore
     );

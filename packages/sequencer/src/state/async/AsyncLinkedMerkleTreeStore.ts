@@ -17,10 +17,10 @@ export interface AsyncLinkedMerkleTreeStore {
 
   getLeavesAsync: (paths: bigint[]) => Promise<(LinkedLeaf | undefined)[]>;
 
-  getLeafIndex: (path: bigint) => bigint | undefined;
+  getLeafIndex: (path: bigint) => Promise<bigint | undefined>;
 
-  getMaximumIndex: () => bigint | undefined;
+  getMaximumIndex: () => Promise<bigint | undefined>;
 
   // For the preloadedKeys functionality
-  getLeafByIndex: (index: bigint) => LinkedLeaf | undefined;
+  getLeafByIndex: (index: bigint) => Promise<LinkedLeaf | undefined>;
 }

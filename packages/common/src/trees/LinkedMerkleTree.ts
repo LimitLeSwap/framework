@@ -12,16 +12,20 @@ import {
   RollupMerkleTreeWitness,
 } from "./RollupMerkleTree";
 
-class LinkedLeaf extends Struct({
+export class LinkedLeafStruct extends Struct({
   value: Field,
   path: Field,
   nextPath: Field,
-}) {}
+}) {
+  public hash(): Field {
+    return Poseidon.hash(LinkedLeafStruct.toFields(this));
+  }
+}
 
 // We use the RollupMerkleTreeWitness here, although we will actually implement
 // the RollupMerkleTreeWitnessV2 defined below when instantiating the class.
 export class LinkedLeafAndMerkleWitness extends Struct({
-  leaf: LinkedLeaf,
+  leaf: LinkedLeafStruct,
   merkleWitness: RollupMerkleTreeWitness,
 }) {}
 
@@ -61,7 +65,7 @@ export interface AbstractLinkedMerkleTree {
    * @param path Index of the node.
    * @returns The data of the leaf.
    */
-  getLeaf(path: bigint): LinkedLeaf | undefined;
+  getLeaf(path: bigint): LinkedLeafStruct | undefined;
 
   /**
    * Returns the witness (also known as
@@ -239,7 +243,7 @@ export function createLinkedMerkleTree(
      * @param path path of the node.
      * @returns The data of the node.
      */
-    public getLeaf(path: bigint): LinkedLeaf | undefined {
+    public getLeaf(path: bigint): LinkedLeafStruct | undefined {
       const index = this.store.getLeafIndex(path);
       if (index === undefined) {
         return undefined;
@@ -248,11 +252,11 @@ export function createLinkedMerkleTree(
       if (closestLeaf === undefined) {
         return undefined;
       }
-      return {
+      return new LinkedLeafStruct({
         value: Field(closestLeaf.value),
         path: Field(closestLeaf.path),
         nextPath: Field(closestLeaf.nextPath),
-      };
+      });
     }
 
     /**
@@ -276,7 +280,7 @@ export function createLinkedMerkleTree(
      * @param index Position of the leaf node.
      * @param leaf New value.
      */
-    private setMerkleLeaf(index: bigint, leaf: LinkedLeaf) {
+    private setMerkleLeaf(index: bigint, leaf: LinkedLeafStruct) {
       this.setNode(
         0,
         index,
@@ -326,11 +330,14 @@ export function createLinkedMerkleTree(
           nextPath: path,
         };
         this.store.setLeaf(prevLeafIndex, newPrevLeaf);
-        this.setMerkleLeaf(prevLeafIndex, {
-          value: Field(newPrevLeaf.value),
-          path: Field(newPrevLeaf.path),
-          nextPath: Field(newPrevLeaf.nextPath),
-        });
+        this.setMerkleLeaf(
+          prevLeafIndex,
+          new LinkedLeafStruct({
+            value: Field(newPrevLeaf.value),
+            path: Field(newPrevLeaf.path),
+            nextPath: Field(newPrevLeaf.nextPath),
+          })
+        );
 
         index = tempIndex + 1n;
       } else {
@@ -346,11 +353,14 @@ export function createLinkedMerkleTree(
       };
       const witnessNext = this.getWitness(newLeaf.path);
       this.store.setLeaf(index, newLeaf);
-      this.setMerkleLeaf(index, {
-        value: Field(newLeaf.value),
-        path: Field(newLeaf.path),
-        nextPath: Field(newLeaf.nextPath),
-      });
+      this.setMerkleLeaf(
+        index,
+        new LinkedLeafStruct({
+          value: Field(newLeaf.value),
+          path: Field(newLeaf.path),
+          nextPath: Field(newLeaf.nextPath),
+        })
+      );
       return new LinkedMerkleWitness({
         leafPrevious: witnessPrevious,
         leafCurrent: witnessNext.leafCurrent,
@@ -373,7 +383,7 @@ export function createLinkedMerkleTree(
       // the tree.
       this.setMerkleLeaf(
         0n,
-        new LinkedLeaf({
+        new LinkedLeafStruct({
           value: Field(0n),
           path: Field(0n),
           nextPath: Field(MAX_FIELD_VALUE),
@@ -398,7 +408,7 @@ export function createLinkedMerkleTree(
           throw new Error("Store Undefined");
         }
         currentIndex = storeIndex + 1n;
-        leaf = new LinkedLeaf({
+        leaf = new LinkedLeafStruct({
           value: Field(0),
           path: Field(0),
           nextPath: Field(0),
@@ -447,7 +457,7 @@ export function createLinkedMerkleTree(
           // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
           isLeft: Array(40).fill(new Bool(true)) as Bool[],
         }),
-        leaf: new LinkedLeaf({
+        leaf: new LinkedLeafStruct({
           value: Field(0),
           path: Field(0),
           nextPath: Field(0),

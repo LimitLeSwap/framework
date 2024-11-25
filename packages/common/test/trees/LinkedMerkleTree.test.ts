@@ -93,7 +93,7 @@ describe.each([4, 16, 254])("cachedMerkleTree - %s", (height) => {
   });
 
   it("should return zeroNode", () => {
-    expect.assertions(3);
+    expect.assertions(4);
     const MAX_FIELD_VALUE: bigint = Field.ORDER - 1n;
     const zeroLeaf = tree.getLeaf(0n);
     expectDefined(zeroLeaf);
