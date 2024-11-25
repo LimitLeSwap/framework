@@ -77,7 +77,7 @@ export class BullQueue
       async onCompleted(listener: (payload: TaskPayload) => Promise<void>) {
         events.on("completed", async (result) => {
           // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-          await listener(JSON.parse(result.returnvalue) as TaskPayload);
+          await listener(result.returnvalue as unknown as TaskPayload);
         });
         await events.waitUntilReady();
       },
