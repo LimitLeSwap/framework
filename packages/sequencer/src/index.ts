@@ -77,3 +77,4 @@ export * from "./settlement/tasks/SettlementProvingTask";
 export * from "./settlement/transactions/MinaTransactionSender";
 export * from "./settlement/transactions/MinaTransactionSimulator";
 export * from "./settlement/transactions/MinaSimulationService";
+export * from "./protocol/baselayer/fees/ConstantFeeStrategy";
