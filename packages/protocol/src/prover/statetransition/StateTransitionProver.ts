@@ -212,20 +212,39 @@ export class StateTransitionProverProgrammable extends ZkProgrammable<
     // This is for dummy STs
     Provable.if(isNotDummy, pathValid, new Bool(true)).assertTrue();
 
+    // Only if we're doing an insert is this valid.
     const previousWitnessValid =
       merkleWitness.leafPrevious.merkleWitness.checkMembershipSimple(
         state.stateRoot,
         merkleWitness.leafPrevious.leaf.hash()
       );
 
+    // Only if we're doing an update.
+    const currentWitnessHolds =
+      merkleWitness.leafCurrent.merkleWitness.checkMembershipSimple(
+        state.stateRoot,
+        merkleWitness.leafCurrent.leaf.hash()
+      );
+
+    // Combine previousWitnessValid and currentWitnessHolds
+    const prevWitnessOrCurrentWitness = Provable.if(
+      isUpdate,
+      currentWitnessHolds,
+      previousWitnessValid
+    );
+
     // We need to check the sequencer had fetched the correct previousLeaf,
     // specifically that the previousLeaf is what is verified.
     // We check the stateRoot matches.
-    // For an insert we the prev leaf is not a dummy,
+    // For an insert the prev leaf is not a dummy,
     // and for an update the prev leaf is a dummy.
 
     // We assert that the previous witness is valid in case of this one being an update
-    Provable.if(isNotDummy, previousWitnessValid, Bool(true)).assertTrue();
+    Provable.if(
+      isNotDummy,
+      prevWitnessOrCurrentWitness,
+      Bool(true)
+    ).assertTrue();
 
     // Need to calculate the new state root after the previous leaf is changed.
     // This is only relevant if it's an insert. If an update, we will just use
