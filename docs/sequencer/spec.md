@@ -12,12 +12,10 @@ Record<path, { leaf, index }>
 write<object>
 get<object>Async
 getMaximumIndexAsync
-getLeafIndexAsync (mapping of path -> leaf index)
 getLeafLessOrEqualAsync(path) (gives us either our current leaf or previous leaf in case of insert)
 
 openTransaction()
 commit()
-mergeIntoParent()
 
 ( getLeafByIndex )
 
@@ -43,7 +41,7 @@ mergeIntoParent()
 preLoading:
 input: path
 ```
-const leaf = getLeaf(path)
+const leaf = parent.getLeaf(path)
 if(leaf !== undefined) {
   super.cache(leaf);
   // Update
@@ -58,3 +56,21 @@ if(leaf !== undefined) {
 }
 
 ```
+
+Sync interface:
+Union of LinkedMerkleTreeStore (rename to LinkedLeafStore) + MerkleTreeStore
+
+Async
+Level 1 methods
+
+InMemoryLeafStore - subset that does leafs + maximumindex
+InMemoryMerkleStore - subset that does only merkle nodes
+
+-> future Redis
+
+InMemoryAsyncLinkedMerkleTreeStore - implements Async 
+uses inmemory implementations
+
+
+
+

@@ -2,6 +2,8 @@ import { LinkedLeaf } from "@proto-kit/common";
 
 import { MerkleTreeNode, MerkleTreeNodeQuery } from "./AsyncMerkleTreeStore";
 
+export type StoredLeaf = { leaf: LinkedLeaf; index: bigint };
+
 export interface AsyncLinkedMerkleTreeStore {
   openTransaction: () => Promise<void>;
 
@@ -9,18 +11,16 @@ export interface AsyncLinkedMerkleTreeStore {
 
   writeNodes: (nodes: MerkleTreeNode[]) => void;
 
-  writeLeaves: (leaves: [string, LinkedLeaf][]) => void;
+  writeLeaves: (leaves: StoredLeaf[]) => void;
 
   getNodesAsync: (
     nodes: MerkleTreeNodeQuery[]
   ) => Promise<(bigint | undefined)[]>;
 
-  getLeavesAsync: (paths: bigint[]) => Promise<(LinkedLeaf | undefined)[]>;
+  getLeavesAsync: (paths: bigint[]) => Promise<(StoredLeaf | undefined)[]>;
 
-  getLeafIndex: (path: bigint) => Promise<bigint | undefined>;
+  getMaximumIndexAsync: () => Promise<bigint | undefined>;
 
-  getMaximumIndex: () => Promise<bigint | undefined>;
-
-  // For the preloadedKeys functionality
-  getLeafByIndex: (index: bigint) => Promise<LinkedLeaf | undefined>;
+  // Doesn't return undefined as there should always be at least one leaf.
+  getLeafLessOrEqualAsync: (path: bigint) => Promise<StoredLeaf>;
 }

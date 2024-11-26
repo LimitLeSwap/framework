@@ -1,11 +1,15 @@
 // eslint-disable-next-line max-classes-per-file
 import { Bool, Field, Poseidon, Provable, Struct } from "o1js";
+import { InMemoryAsyncLinkedMerkleTreeStore } from "@proto-kit/sequencer/dist/storage/inmemory/InMemoryAsyncLinkedMerkleTreeStore";
+import { CachedLinkedMerkleTreeStore } from "@proto-kit/sequencer/dist/state/merkle/CachedLinkedMerkleTreeStore";
 
 import { TypedClass } from "../types";
 import { range } from "../utils";
 
-import { LinkedMerkleTreeStore } from "./LinkedMerkleTreeStore";
-import { InMemoryLinkedMerkleTreeStorage } from "./InMemoryLinkedMerkleTreeStorage";
+import {
+  LinkedLeafStore,
+  LinkedMerkleTreeStore,
+} from "./LinkedMerkleTreeStore";
 import {
   AbstractMerkleWitness,
   maybeSwap,
@@ -37,7 +41,7 @@ class LinkedStructTemplate extends Struct({
 export interface AbstractLinkedMerkleWitness extends LinkedStructTemplate {}
 
 export interface AbstractLinkedMerkleTree {
-  store: LinkedMerkleTreeStore;
+  store: LinkedLeafStore;
   /**
    * Returns a node which lives at a given index and level.
    * @param level Level of the node.
@@ -78,7 +82,7 @@ export interface AbstractLinkedMerkleTree {
 }
 
 export interface AbstractLinkedMerkleTreeClass {
-  new (store: LinkedMerkleTreeStore): AbstractLinkedMerkleTree;
+  new (store: LinkedLeafStore): AbstractLinkedMerkleTree;
 
   WITNESS: TypedClass<AbstractLinkedMerkleWitness> &
     typeof LinkedStructTemplate;
@@ -200,7 +204,9 @@ export function createLinkedMerkleTree(
     public static HEIGHT = height;
 
     public static EMPTY_ROOT = new AbstractLinkedRollupMerkleTree(
-      new InMemoryLinkedMerkleTreeStorage()
+      await CachedLinkedMerkleTreeStore.new(
+        InMemoryAsyncLinkedMerkleTreeStore()
+      )
     )
       .getRoot()
       .toBigInt();
@@ -244,18 +250,14 @@ export function createLinkedMerkleTree(
      * @returns The data of the node.
      */
     public getLeaf(path: bigint): LinkedLeafStruct | undefined {
-      const index = this.store.getLeafIndex(path);
-      if (index === undefined) {
-        return undefined;
-      }
-      const closestLeaf = this.store.getLeaf(index);
-      if (closestLeaf === undefined) {
+      const storedLeaf = this.store.getLeaf(path);
+      if (storedLeaf === undefined) {
         return undefined;
       }
       return new LinkedLeafStruct({
-        value: Field(closestLeaf.value),
-        path: Field(closestLeaf.path),
-        nextPath: Field(closestLeaf.nextPath),
+        value: Field(storedLeaf.leaf.value),
+        path: Field(storedLeaf.leaf.path),
+        nextPath: Field(storedLeaf.leaf.nextPath),
       });
     }
 
@@ -308,10 +310,11 @@ export function createLinkedMerkleTree(
       if (value === undefined) {
         return this.getWitness(path);
       }
-      let index = this.store.getLeafIndex(path);
+      const storedLeaf = this.store.getLeaf(path);
       const prevLeaf = this.store.getLeafLessOrEqual(path);
       let witnessPrevious;
-      if (index === undefined) {
+      let index: bigint;
+      if (storedLeaf === undefined) {
         // The above means the path doesn't already exist, and we are inserting, not updating.
         // This requires us to update the node with the previous path, as well.
         const tempIndex = this.store.getMaximumIndex();
@@ -321,17 +324,15 @@ export function createLinkedMerkleTree(
         if (tempIndex + 1n >= 2 ** height) {
           throw new Error("Index greater than maximum leaf number");
         }
-        // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-        const prevLeafIndex = this.store.getLeafIndex(prevLeaf.path) as bigint;
-        witnessPrevious = this.getWitness(prevLeaf.path).leafCurrent;
+        witnessPrevious = this.getWitness(prevLeaf.leaf.path).leafCurrent;
         const newPrevLeaf = {
-          value: prevLeaf.value,
-          path: prevLeaf.path,
-          nextPath: path,
+          value: prevLeaf.leaf.value,
+          path: prevLeaf.leaf.path,
+          nextPath: prevLeaf.leaf.path,
         };
-        this.store.setLeaf(prevLeafIndex, newPrevLeaf);
+        this.store.setLeaf(prevLeaf.index, newPrevLeaf);
         this.setMerkleLeaf(
-          prevLeafIndex,
+          prevLeaf.index,
           new LinkedLeafStruct({
             value: Field(newPrevLeaf.value),
             path: Field(newPrevLeaf.path),
@@ -342,14 +343,12 @@ export function createLinkedMerkleTree(
         index = tempIndex + 1n;
       } else {
         witnessPrevious = this.dummy();
+        index = storedLeaf.index;
       }
-      // The following sets a default for the previous value
-      // TODO: How to handle this better.
-
       const newLeaf = {
         value: value,
         path: path,
-        nextPath: prevLeaf.nextPath,
+        nextPath: prevLeaf.leaf.nextPath,
       };
       const witnessNext = this.getWitness(newLeaf.path);
       this.store.setLeaf(index, newLeaf);
@@ -399,10 +398,11 @@ export function createLinkedMerkleTree(
      * @returns The witness that belongs to the leaf.
      */
     public getWitness(path: bigint): LinkedMerkleWitness {
-      let currentIndex = this.store.getLeafIndex(path);
+      const storedLeaf = this.store.getLeaf(path);
       let leaf;
+      let currentIndex: bigint;
 
-      if (currentIndex === undefined) {
+      if (storedLeaf === undefined) {
         const storeIndex = this.store.getMaximumIndex();
         if (storeIndex === undefined) {
           throw new Error("Store Undefined");
@@ -414,10 +414,12 @@ export function createLinkedMerkleTree(
           nextPath: Field(0),
         });
       } else {
-        leaf = this.getLeaf(path);
-        if (leaf === undefined) {
-          throw new Error("Leaf is undefined");
-        }
+        leaf = new LinkedLeafStruct({
+          value: Field(storedLeaf.leaf.value),
+          path: Field(storedLeaf.leaf.path),
+          nextPath: Field(storedLeaf.leaf.nextPath),
+        });
+        currentIndex = storedLeaf.index;
       }
 
       const pathArray = [];

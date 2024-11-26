@@ -1,5 +1,6 @@
 import {
-  InMemoryLinkedMerkleTreeStorage,
+  InMemoryLinkedLeafStore,
+  InMemoryMerkleTreeStorage,
   LinkedLeaf,
   noop,
 } from "@proto-kit/common";
@@ -13,53 +14,52 @@ import {
 export class InMemoryAsyncLinkedMerkleTreeStore
   implements AsyncLinkedMerkleTreeStore
 {
-  private readonly store = new InMemoryLinkedMerkleTreeStorage();
+  private readonly leafStore = new InMemoryLinkedLeafStore();
 
-  public writeNodes(nodes: MerkleTreeNode[]): void {
-    nodes.forEach(({ key, level, value }) =>
-      this.store.setNode(key, level, value)
-    );
+  private readonly nodeStore = new InMemoryMerkleTreeStorage();
+
+  public async openTransaction(): Promise<void> {
+    noop();
   }
 
   public async commit(): Promise<void> {
     noop();
   }
 
-  public async openTransaction(): Promise<void> {
-    noop();
+  public writeNodes(nodes: MerkleTreeNode[]): void {
+    nodes.forEach(({ key, level, value }) =>
+      this.nodeStore.setNode(key, level, value)
+    );
+  }
+
+  // This is using the index/key
+  public writeLeaves(leaves: { leaf: LinkedLeaf; index: bigint }[]) {
+    leaves.forEach(({ leaf, index }) => {
+      this.leafStore.setLeaf(index, leaf);
+    });
   }
 
   public async getNodesAsync(
     nodes: MerkleTreeNodeQuery[]
   ): Promise<(bigint | undefined)[]> {
-    return nodes.map(({ key, level }) => this.store.getNode(key, level));
+    return nodes.map(({ key, level }) => this.nodeStore.getNode(key, level));
   }
 
   public async getLeavesAsync(paths: bigint[]) {
     return paths.map((path) => {
-      const index = this.store.getLeafIndex(path);
-      if (index !== undefined) {
-        this.store.getLeaf(index);
+      const leaf = this.leafStore.getLeaf(path);
+      if (leaf !== undefined) {
+        return leaf;
       }
       return undefined;
     });
   }
 
-  public writeLeaves(leaves: [string, LinkedLeaf][]) {
-    leaves.forEach(([key, leaf]) => {
-      this.store.setLeaf(BigInt(key), leaf);
-    });
+  public getMaximumIndexAsync() {
+    return Promise.resolve(this.leafStore.getMaximumIndex());
   }
 
-  public getLeafIndex(path: bigint) {
-    return this.store.getLeafIndex(path);
-  }
-
-  public getMaximumIndex() {
-    return this.store.getMaximumIndex();
-  }
-
-  public getLeafByIndex(index: bigint) {
-    return this.store.getLeaf(index);
+  public getLeafLessOrEqualAsync(path: bigint) {
+    return Promise.resolve(this.leafStore.getLeafLessOrEqual(path));
   }
 }

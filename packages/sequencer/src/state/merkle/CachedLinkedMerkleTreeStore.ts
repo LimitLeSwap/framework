@@ -1,8 +1,9 @@
 import {
   log,
-  noop,
-  InMemoryLinkedMerkleTreeStorage,
+  InMemoryLinkedLeafStore,
   LinkedLeaf,
+  InMemoryMerkleTreeStorage,
+  LinkedMerkleTreeStore,
 } from "@proto-kit/common";
 
 import {
@@ -11,10 +12,7 @@ import {
 } from "../async/AsyncMerkleTreeStore";
 import { AsyncLinkedMerkleTreeStore } from "../async/AsyncLinkedMerkleTreeStore";
 
-export class CachedLinkedMerkleTreeStore
-  extends InMemoryLinkedMerkleTreeStorage
-  implements AsyncLinkedMerkleTreeStore
-{
+export class CachedLinkedMerkleTreeStore implements LinkedMerkleTreeStore {
   private writeCache: {
     nodes: {
       [key: number]: {
@@ -22,46 +20,27 @@ export class CachedLinkedMerkleTreeStore
       };
     };
     leaves: {
-      [key: string]: LinkedLeaf;
+      [key: string]: { leaf: LinkedLeaf; index: bigint };
     };
   } = { nodes: {}, leaves: {} };
 
-  public async openTransaction(): Promise<void> {
-    noop();
-  }
+  private readonly leafStore = new InMemoryLinkedLeafStore();
 
-  public async commit(): Promise<void> {
-    noop();
-  }
+  private readonly nodeStore = new InMemoryMerkleTreeStorage();
 
-  private constructor(private readonly parent: AsyncLinkedMerkleTreeStore) {
-    super();
-  }
+  private constructor(private readonly parent: AsyncLinkedMerkleTreeStore) {}
 
   public static async new(
     parent: AsyncLinkedMerkleTreeStore
   ): Promise<CachedLinkedMerkleTreeStore> {
     const cachedInstance = new CachedLinkedMerkleTreeStore(parent);
-    const maxIndex = parent.getMaximumIndex();
-    // If the parent is populated then we
-    // load up the first key and the last key.
-    // The last key is to ensure we do not overwrite
-    // any existing paths when we insert a new node/leaf.
-    if (maxIndex !== undefined) {
-      const leaf = parent.getLeafByIndex(maxIndex);
-      if (leaf === undefined) {
-        throw Error("Max Path is not defined");
-      }
-      await cachedInstance.preloadKeys([0n, leaf.path]);
-    } else {
-      await cachedInstance.preloadKeys([0n]);
-    }
+    await cachedInstance.preloadMaximumIndex();
     return cachedInstance;
   }
 
   // This gets the nodes from the in memory store (which looks also to be the cache).
   public getNode(key: bigint, level: number): bigint | undefined {
-    return super.getNode(key, level);
+    return this.nodeStore.getNode(key, level);
   }
 
   // This gets the nodes from the in memory store.
@@ -97,7 +76,7 @@ export class CachedLinkedMerkleTreeStore
 
   // This sets the nodes in the cache and in the in-memory tree.
   public setNode(key: bigint, level: number, value: bigint) {
-    super.setNode(key, level, value);
+    this.nodeStore.setNode(key, level, value);
     (this.writeCache.nodes[level] ??= {})[key.toString()] = value;
   }
 
@@ -109,25 +88,18 @@ export class CachedLinkedMerkleTreeStore
     });
   }
 
-  // This gets the nodes from the in memory store (which looks also to be the cache).
-  private getLeafByPath(path: bigint) {
-    const index = super.getLeafIndex(path);
-    if (index !== undefined) {
-      return super.getLeaf(index);
-    }
-    return undefined;
-  }
-
   // This gets the leaves and the nodes from the in memory store.
   // If the leaf is not in the in-memory store it goes to the parent (i.e.
   // what's put in the constructor).
   public async getLeavesAsync(paths: bigint[]) {
-    const results = Array<LinkedLeaf | undefined>(paths.length).fill(undefined);
+    const results = Array<{ leaf: LinkedLeaf; index: bigint } | undefined>(
+      paths.length
+    ).fill(undefined);
 
     const toFetch: bigint[] = [];
 
     paths.forEach((path, index) => {
-      const localResult = this.getLeafByPath(path);
+      const localResult = this.getLeaf(path);
       if (localResult !== undefined) {
         results[index] = localResult;
       } else {
@@ -151,19 +123,15 @@ export class CachedLinkedMerkleTreeStore
   // It doesn't need any fancy logic and just updates the leaves.
   // I don't think we need to coordinate this with the nodes
   // or do any calculations. Just a straight copy and paste.
-  public writeLeaves(leaves: [string, LinkedLeaf][]) {
-    leaves.forEach(([key, leaf]) => {
-      this.setLeaf(BigInt(key), leaf);
+  public writeLeaves(leaves: { leaf: LinkedLeaf; index: bigint }[]) {
+    leaves.forEach(({ leaf, index }) => {
+      this.setLeaf(index, leaf);
     });
   }
 
-  public setLeaf(key: bigint, leaf: LinkedLeaf) {
-    this.writeCache.leaves[key.toString()] = leaf;
-    super.setLeaf(BigInt(key), leaf);
-  }
-
-  public getLeafByIndex(index: bigint) {
-    return super.getLeaf(index);
+  public setLeaf(index: bigint, leaf: LinkedLeaf) {
+    this.writeCache.leaves[leaf.path.toString()] = { leaf: leaf, index: index };
+    this.leafStore.setLeaf(index, leaf);
   }
 
   // This gets the nodes from the cache.
@@ -178,10 +146,8 @@ export class CachedLinkedMerkleTreeStore
 
   // This gets the leaves from the cache.
   // Only used in mergeIntoParent
-  public getWrittenLeaves(): {
-    [key: string]: LinkedLeaf;
-  } {
-    return this.writeCache.leaves;
+  public getWrittenLeaves(): { leaf: LinkedLeaf; index: bigint }[] {
+    return Object.values(this.writeCache.leaves);
   }
 
   // This ensures all the keys needed to be loaded
@@ -190,15 +156,17 @@ export class CachedLinkedMerkleTreeStore
   // (without the loading) when we find the closest leaf.
   // TODO: see how we could use a returned value.
   public async loadUpKeysForClosestPath(path: bigint): Promise<void> {
-    // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-    let largestLeaf = this.getLeaf(0n) as LinkedLeaf;
-    while (largestLeaf.nextPath <= path) {
-      let nextLeaf = this.getLeafByPath(largestLeaf.nextPath);
+    let largestLeaf = this.getLeaf(0n);
+    if (largestLeaf === undefined) {
+      throw Error("Path 0n should be defined.");
+    }
+    while (largestLeaf.leaf.nextPath <= path) {
+      let nextLeaf = this.getLeaf(largestLeaf.leaf.nextPath);
       // This means the nextPath wasn't preloaded and we have to load it.
       if (nextLeaf === undefined) {
         // eslint-disable-next-line no-await-in-loop
-        await this.preloadKey(largestLeaf.nextPath);
-        nextLeaf = this.getLeafByPath(largestLeaf.nextPath);
+        await this.preloadKey(largestLeaf.leaf.nextPath);
+        nextLeaf = this.getLeaf(largestLeaf.leaf.nextPath);
         if (nextLeaf === undefined) {
           throw Error(" Next Path is defined but not fetched");
         }
@@ -254,35 +222,55 @@ export class CachedLinkedMerkleTreeStore
     return nodesToRetrieve;
   }
 
-  // Takes a list of keys and for each key collects the relevant nodes from the
-  // parent tree and sets the leaf and node in the cached tree (and in-memory tree).
-  public async preloadKeys(paths: bigint[]) {
-    const nodesToRetrieve = paths.flatMap((path) => {
-      const pathIndex = this.parent.getLeafIndex(path) ?? 0n;
-      return this.collectNodesToFetch(pathIndex);
-    });
-
-    const resultsNode = await this.parent.getNodesAsync(nodesToRetrieve);
-    let index = 0;
-    for (const retrievedNode of nodesToRetrieve) {
-      const { key, level } = retrievedNode;
-      const value = resultsNode[index];
-      if (value !== undefined) {
-        this.setNode(key, level, value);
-        if (level === 0) {
-          // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-          const resultLeaf = this.parent.getLeafByIndex(key) as LinkedLeaf;
-          super.setLeaf(key, resultLeaf);
-          this.writeCache.leaves[key.toString()] = resultLeaf;
-        }
-      }
-      index += 1;
+  protected async preloadMaximumIndex() {
+    if (this.leafStore.getMaximumIndex() === undefined) {
+      this.leafStore.maximumIndex = await this.parent.getMaximumIndexAsync();
     }
   }
 
-  // This is preloadKeys with just one index/key.
-  public async preloadKey(path: bigint): Promise<void> {
-    await this.preloadKeys([path]);
+  public async preloadNodes(indexes: bigint[]) {
+    const nodesToRetrieve = indexes.flatMap((key) =>
+      this.collectNodesToFetch(key)
+    );
+
+    const results = await this.parent.getNodesAsync(nodesToRetrieve);
+    nodesToRetrieve.forEach(({ key, level }, index) => {
+      const value = results[index];
+      if (value !== undefined) {
+        this.setNode(key, level, value);
+      }
+    });
+  }
+
+  public getLeaf(path: bigint) {
+    return this.leafStore.getLeaf(path);
+  }
+
+  // Takes a list of paths and for each key collects the relevant nodes from the
+  // parent tree and sets the leaf and node in the cached tree (and in-memory tree).
+  public async preloadKey(path: bigint) {
+    const leaf = (await this.parent.getLeavesAsync([path]))[0];
+    if (leaf !== undefined) {
+      this.leafStore.setLeaf(leaf.index, leaf.leaf);
+      // Update
+      await this.preloadNodes([leaf.index]);
+    } else {
+      // Insert
+      const previousLeaf = await this.parent.getLeafLessOrEqualAsync(path);
+      this.leafStore.setLeaf(previousLeaf.index, previousLeaf.leaf);
+      await this.preloadNodes([previousLeaf.index]);
+      const maximumIndex =
+        this.leafStore.getMaximumIndex() ??
+        (await this.parent.getMaximumIndexAsync());
+      if (maximumIndex === undefined) {
+        throw Error("Maximum index should be defined in parent.");
+      }
+      await this.preloadNodes([maximumIndex]);
+    }
+  }
+
+  public async preloadKeys(paths: bigint[]): Promise<void> {
+    await paths.forEach(async (x) => await this.preloadKey(x));
   }
 
   // This merges the cache into the parent tree and resets the cache, but not the
@@ -297,7 +285,7 @@ export class CachedLinkedMerkleTreeStore
     const nodes = this.getWrittenNodes();
     const leaves = this.getWrittenLeaves();
 
-    this.parent.writeLeaves(Object.entries(leaves));
+    this.parent.writeLeaves(Object.values(leaves));
     const writes = Object.keys(nodes).flatMap((levelString) => {
       const level = Number(levelString);
       return Object.entries(nodes[level]).map<MerkleTreeNode>(
@@ -315,5 +303,13 @@ export class CachedLinkedMerkleTreeStore
 
     await this.parent.commit();
     this.resetWrittenTree();
+  }
+
+  public getLeafLessOrEqual(path: bigint) {
+    return this.leafStore.getLeafLessOrEqual(path);
+  }
+
+  public getMaximumIndex() {
+    return this.leafStore.getMaximumIndex();
   }
 }
