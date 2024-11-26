@@ -9,6 +9,7 @@ import { StateTransition } from "../model/StateTransition";
 
 import { StateServiceProvider } from "./StateServiceProvider";
 import { RuntimeMethodExecutionContext } from "./context/RuntimeMethodExecutionContext";
+import GlobalExecutionContext from "./context/GlobalExecutionContext";
 
 export class WithPath {
   public path?: Field;
@@ -144,6 +145,10 @@ export class State<Value> extends Mixin(WithPath, WithStateServiceProvider) {
     return option;
   }
 
+  private generateCallId(): string {
+    return `${Date.now()}-${Math.random()}`;
+  }
+
   /**
    * Sets a new state value by creating a state transition from
    * the current value to the newly set value.
@@ -156,6 +161,21 @@ export class State<Value> extends Mixin(WithPath, WithStateServiceProvider) {
    * @param value - Value to be set as the current state
    */
   public async set(value: Value) {
+    // Add state call to the global execution context to ensure the state call is awaited properly
+    const callId = this.generateCallId();
+    const context = container.resolve(GlobalExecutionContext);
+
+    context.addStateCall(callId);
+
+    // Introduce a delay to ensure the JS evaluation loop continues
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, 0);
+    });
+
+    if (!context.hasStateCall(callId)) {
+      throw new Error("State call was not awaited properly");
+    }
+
     // link the transition to the current state
     const fromOption = await this.witnessFromState();
     const toOption = Option.fromValue(value, this.valueType);
@@ -171,5 +191,7 @@ export class State<Value> extends Mixin(WithPath, WithStateServiceProvider) {
     container
       .resolve(RuntimeMethodExecutionContext)
       .addStateTransition(stateTransition);
+
+    context.removeStateCall(callId);
   }
 }
