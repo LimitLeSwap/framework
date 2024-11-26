@@ -231,7 +231,7 @@ export class BlockProducerModule extends SequencerModule<BlockConfig> {
     return block;
   }
 
-  public async start() {
+  public async blockResultCompleteCheck() {
     // Check if metadata height is behind block production.
     // This can happen when the sequencer crashes after a block has been produced
     // but before the metadata generation has finished
@@ -244,5 +244,9 @@ export class BlockProducerModule extends SequencerModule<BlockConfig> {
       // Here, the metadata has been computed already
     }
     // If we reach here, its a genesis startup, no blocks exist yet
+  }
+
+  public async start() {
+    await this.blockResultCompleteCheck();
   }
 }
