@@ -22,7 +22,6 @@ import {
   ProofTaskSerializer,
 } from "../../../helpers/utils";
 import { TaskWorkerModule } from "../../../worker/worker/TaskWorkerModule";
-import { PreFilledWitnessProvider } from "../../../state/prefilled/PreFilledWitnessProvider";
 
 import {
   StateTransitionParametersSerializer,
@@ -64,31 +63,21 @@ export class StateTransitionTask
   public async compute(
     input: StateTransitionProofParameters
   ): Promise<StateTransitionProof> {
-    const witnessProvider = new PreFilledWitnessProvider(input.merkleWitnesses);
-
-    const { witnessProviderReference } = this.stateTransitionProver;
-    const previousProvider = witnessProviderReference.getWitnessProvider();
-    witnessProviderReference.setWitnessProvider(witnessProvider);
-
     const stBatch = input.stateTransitions.slice();
+    const merkleWitnesses = input.merkleWitnesses.slice();
 
     const output = await this.stateTransitionProver.runBatch(
       input.publicInput,
-      StateTransitionProvableBatch.fromMappings(stBatch)
+      StateTransitionProvableBatch.fromMappings(stBatch, merkleWitnesses)
     );
     log.debug("STTask public io:", {
       input: StateTransitionProverPublicInput.toJSON(input.publicInput),
       output: StateTransitionProverPublicOutput.toJSON(output),
     });
 
-    const proof = await this.executionContext
+    return await this.executionContext
       .current()
       .result.prove<StateTransitionProof>();
-
-    if (previousProvider !== undefined) {
-      witnessProviderReference.setWitnessProvider(previousProvider);
-    }
-    return proof;
   }
 
   public async prepare(): Promise<void> {

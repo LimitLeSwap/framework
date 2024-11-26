@@ -167,6 +167,8 @@ type NonMethodKeys<Type> = {
 }[keyof Type];
 export type NonMethods<Type> = Pick<Type, NonMethodKeys<Type>>;
 
+export const MAX_FIELD = Field(Field.ORDER - 1n);
+
 /**
  * Returns a boolean indicating whether a given class is a subclass of another class,
  * indicated by the name parameter.
