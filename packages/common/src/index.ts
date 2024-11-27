@@ -20,3 +20,4 @@ export * from "./trees/LinkedMerkleTree";
 export * from "./trees/InMemoryLinkedLeafStore";
 export * from "./events/EventEmitterProxy";
 export * from "./trees/MockAsyncMerkleStore";
+export * from "./trees/InMemoryLinkedMerkleLeafStore";

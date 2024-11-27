@@ -1,5 +1,5 @@
 import { Bool, Provable, Struct } from "o1js";
-import { InMemoryLinkedMerkleTreeStorage, range } from "@proto-kit/common";
+import { InMemoryLinkedMerkleLeafStore, range } from "@proto-kit/common";
 import {
   LinkedMerkleTree,
   LinkedMerkleTreeWitness,
@@ -95,7 +95,7 @@ export class StateTransitionProvableBatch extends Struct({
       batch.push(ProvableStateTransition.dummy());
       transitionTypes.push(ProvableStateTransitionType.normal);
       witnesses.push(
-        new LinkedMerkleTree(new InMemoryLinkedMerkleTreeStorage()).getWitness(
+        new LinkedMerkleTree(new InMemoryLinkedMerkleLeafStore()).getWitness(
           BigInt(0)
         )
       );

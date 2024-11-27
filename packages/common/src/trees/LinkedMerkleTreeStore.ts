@@ -11,7 +11,6 @@ export interface LinkedLeafStore {
 }
 
 export type LinkedLeaf = { value: bigint; path: bigint; nextPath: bigint };
-
 export interface LinkedMerkleTreeStore
   extends LinkedLeafStore,
     MerkleTreeStore {}

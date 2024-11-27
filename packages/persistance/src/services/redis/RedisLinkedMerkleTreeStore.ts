@@ -60,25 +60,24 @@ export class RedisLinkedMerkleTreeStore implements AsyncLinkedMerkleTreeStore {
     this.cache = this.cache.concat(nodes);
   }
 
-  public writeLeaves(leaves: [string, LinkedLeaf][]) {}
+  public writeLeaves(leaves: { leaf: LinkedLeaf; index: bigint }[]) {}
 
   public getLeavesAsync(paths: bigint[]) {
     return Promise.resolve([undefined]);
   }
 
-  public getLeafIndex(path: bigint) {
-    return 0n;
+  public getMaximumIndexAsync() {
+    return Promise.resolve(0n);
   }
 
-  public getMaximumIndex() {
-    return 0n;
-  }
-
-  public getLeafByIndex(index: bigint) {
-    return {
-      value: 0n,
-      path: 0n,
-      nextPath: 0n,
-    };
+  public getLeafLessOrEqualAsync(path: bigint) {
+    return Promise.resolve({
+      leaf: {
+        value: 0n,
+        path: 0n,
+        nextPath: 0n,
+      },
+      index: 0n,
+    });
   }
 }

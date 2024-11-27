@@ -1,20 +1,16 @@
 // eslint-disable-next-line max-classes-per-file
 import { Bool, Field, Poseidon, Provable, Struct } from "o1js";
-import { InMemoryAsyncLinkedMerkleTreeStore } from "@proto-kit/sequencer/dist/storage/inmemory/InMemoryAsyncLinkedMerkleTreeStore";
-import { CachedLinkedMerkleTreeStore } from "@proto-kit/sequencer/dist/state/merkle/CachedLinkedMerkleTreeStore";
 
 import { TypedClass } from "../types";
 import { range } from "../utils";
 
-import {
-  LinkedLeafStore,
-  LinkedMerkleTreeStore,
-} from "./LinkedMerkleTreeStore";
+import { LinkedMerkleTreeStore } from "./LinkedMerkleTreeStore";
 import {
   AbstractMerkleWitness,
   maybeSwap,
   RollupMerkleTreeWitness,
 } from "./RollupMerkleTree";
+import { InMemoryLinkedMerkleLeafStore } from "./InMemoryLinkedMerkleLeafStore";
 
 export class LinkedLeafStruct extends Struct({
   value: Field,
@@ -41,7 +37,7 @@ class LinkedStructTemplate extends Struct({
 export interface AbstractLinkedMerkleWitness extends LinkedStructTemplate {}
 
 export interface AbstractLinkedMerkleTree {
-  store: LinkedLeafStore;
+  store: LinkedMerkleTreeStore;
   /**
    * Returns a node which lives at a given index and level.
    * @param level Level of the node.
@@ -82,7 +78,7 @@ export interface AbstractLinkedMerkleTree {
 }
 
 export interface AbstractLinkedMerkleTreeClass {
-  new (store: LinkedLeafStore): AbstractLinkedMerkleTree;
+  new (store: LinkedMerkleTreeStore): AbstractLinkedMerkleTree;
 
   WITNESS: TypedClass<AbstractLinkedMerkleWitness> &
     typeof LinkedStructTemplate;
@@ -204,9 +200,7 @@ export function createLinkedMerkleTree(
     public static HEIGHT = height;
 
     public static EMPTY_ROOT = new AbstractLinkedRollupMerkleTree(
-      await CachedLinkedMerkleTreeStore.new(
-        InMemoryAsyncLinkedMerkleTreeStore()
-      )
+      new InMemoryLinkedMerkleLeafStore()
     )
       .getRoot()
       .toBigInt();

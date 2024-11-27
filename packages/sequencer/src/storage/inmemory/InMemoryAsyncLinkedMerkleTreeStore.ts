@@ -2,6 +2,7 @@ import {
   InMemoryLinkedLeafStore,
   InMemoryMerkleTreeStorage,
   LinkedLeaf,
+  LinkedMerkleTreeStore,
   noop,
 } from "@proto-kit/common";
 
@@ -12,7 +13,7 @@ import {
 } from "../../state/async/AsyncMerkleTreeStore";
 
 export class InMemoryAsyncLinkedMerkleTreeStore
-  implements AsyncLinkedMerkleTreeStore
+  implements AsyncLinkedMerkleTreeStore, LinkedMerkleTreeStore
 {
   private readonly leafStore = new InMemoryLinkedLeafStore();
 
@@ -61,5 +62,29 @@ export class InMemoryAsyncLinkedMerkleTreeStore
 
   public getLeafLessOrEqualAsync(path: bigint) {
     return Promise.resolve(this.leafStore.getLeafLessOrEqual(path));
+  }
+
+  public setLeaf(index: bigint, value: LinkedLeaf) {
+    this.leafStore.setLeaf(index, value);
+  }
+
+  public getLeaf(path: bigint) {
+    return this.leafStore.getLeaf(path);
+  }
+
+  public getLeafLessOrEqual(path: bigint) {
+    return this.leafStore.getLeafLessOrEqual(path);
+  }
+
+  public getMaximumIndex() {
+    return this.leafStore.getMaximumIndex();
+  }
+
+  public setNode(key: bigint, level: number, value: bigint) {
+    this.nodeStore.setNode(key, level, value);
+  }
+
+  public getNode(key: bigint, level: number) {
+    return this.nodeStore.getNode(key, level);
   }
 }
