@@ -3,7 +3,7 @@ import { Field, Poseidon } from "o1js";
 
 import {
   createLinkedMerkleTree,
-  InMemoryLinkedMerkleTreeStorage,
+  InMemoryLinkedMerkleLeafStore,
   log,
 } from "../../src";
 import { expectDefined } from "../../dist/utils";
@@ -11,13 +11,13 @@ import { expectDefined } from "../../dist/utils";
 describe.each([4, 16, 254])("cachedMerkleTree - %s", (height) => {
   class LinkedMerkleTree extends createLinkedMerkleTree(height) {}
 
-  let store: InMemoryLinkedMerkleTreeStorage;
+  let store: InMemoryLinkedMerkleLeafStore;
   let tree: LinkedMerkleTree;
 
   beforeEach(() => {
     log.setLevel("INFO");
 
-    store = new InMemoryLinkedMerkleTreeStorage();
+    store = new InMemoryLinkedMerkleLeafStore();
     tree = new LinkedMerkleTree(store);
   });
 
@@ -106,13 +106,13 @@ describe.each([4, 16, 254])("cachedMerkleTree - %s", (height) => {
 // Separate describe here since we only want small trees for this test.
 describe("Error check", () => {
   class LinkedMerkleTree extends createLinkedMerkleTree(4) {}
-  let store: InMemoryLinkedMerkleTreeStorage;
+  let store: InMemoryLinkedMerkleLeafStore;
   let tree: LinkedMerkleTree;
 
   it("throw for invalid index", () => {
     log.setLevel("INFO");
 
-    store = new InMemoryLinkedMerkleTreeStorage();
+    store = new InMemoryLinkedMerkleLeafStore();
     tree = new LinkedMerkleTree(store);
     expect(() => {
       for (let i = 0; i < 2n ** BigInt(4) + 1n; i++) {

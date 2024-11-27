@@ -322,7 +322,7 @@ export function createLinkedMerkleTree(
         const newPrevLeaf = {
           value: prevLeaf.leaf.value,
           path: prevLeaf.leaf.path,
-          nextPath: prevLeaf.leaf.path,
+          nextPath: path,
         };
         this.store.setLeaf(prevLeaf.index, newPrevLeaf);
         this.setMerkleLeaf(
