@@ -29,18 +29,12 @@ export class InMemoryLinkedLeafStore implements LinkedLeafStore {
   }
 
   // This gets the leaf with the closest path.
-  public getLeafLessOrEqual(path: bigint): { leaf: LinkedLeaf; index: bigint } {
-    let largestLeaf = this.getLeaf(0n);
-    if (largestLeaf === undefined) {
-      throw new Error("Path 0n should always be defined");
-    }
-    while (largestLeaf.leaf.nextPath <= path) {
-      const nextLeaf = this.getLeaf(largestLeaf.leaf.nextPath);
-      if (nextLeaf === undefined) {
-        throw new Error("Next Path should always be defined");
-      }
-      largestLeaf = nextLeaf;
-    }
-    return largestLeaf;
+  public getLeafLessOrEqual(
+    path: bigint
+  ): { leaf: LinkedLeaf; index: bigint } | undefined {
+    return Object.values(this.leaves).find(
+      (storedLeaf) =>
+        storedLeaf.leaf.nextPath > path && storedLeaf.leaf.path <= path
+    );
   }
 }

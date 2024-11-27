@@ -5,7 +5,9 @@ export interface LinkedLeafStore {
 
   getLeaf: (path: bigint) => { leaf: LinkedLeaf; index: bigint } | undefined;
 
-  getLeafLessOrEqual: (path: bigint) => { leaf: LinkedLeaf; index: bigint };
+  getLeafLessOrEqual: (
+    path: bigint
+  ) => { leaf: LinkedLeaf; index: bigint } | undefined;
 
   getMaximumIndex: () => bigint | undefined;
 }

@@ -21,6 +21,5 @@ export interface AsyncLinkedMerkleTreeStore {
 
   getMaximumIndexAsync: () => Promise<bigint | undefined>;
 
-  // Doesn't return undefined as there should always be at least one leaf.
-  getLeafLessOrEqualAsync: (path: bigint) => Promise<StoredLeaf>;
+  getLeafLessOrEqualAsync: (path: bigint) => Promise<StoredLeaf | undefined>;
 }

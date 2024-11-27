@@ -306,6 +306,9 @@ export function createLinkedMerkleTree(
       }
       const storedLeaf = this.store.getLeaf(path);
       const prevLeaf = this.store.getLeafLessOrEqual(path);
+      if (prevLeaf === undefined) {
+        throw Error("Prev leaf shouldn't be undefined");
+      }
       let witnessPrevious;
       let index: bigint;
       if (storedLeaf === undefined) {

@@ -45,7 +45,7 @@ export class SyncCachedLinkedMerkleTreeStore
     return this.parent.getMaximumIndex();
   }
 
-  public getLeafLessOrEqual(path: bigint): StoredLeaf {
+  public getLeafLessOrEqual(path: bigint): StoredLeaf | undefined {
     return (
       this.leafStore.getLeafLessOrEqual(path) ??
       this.parent.getLeafLessOrEqual(path)

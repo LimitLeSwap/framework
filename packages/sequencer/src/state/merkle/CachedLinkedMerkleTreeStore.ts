@@ -259,6 +259,9 @@ export class CachedLinkedMerkleTreeStore
     } else {
       // Insert
       const previousLeaf = await this.parent.getLeafLessOrEqualAsync(path);
+      if (previousLeaf === undefined) {
+        throw Error("Previous Leaf should never be empty");
+      }
       this.leafStore.setLeaf(previousLeaf.index, previousLeaf.leaf);
       await this.preloadNodes([previousLeaf.index]);
       const maximumIndex =
