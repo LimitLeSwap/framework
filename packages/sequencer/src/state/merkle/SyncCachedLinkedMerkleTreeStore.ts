@@ -1,21 +1,25 @@
 import {
   LinkedLeaf,
   LinkedMerkleTree,
-  LinkedMerkleTreeStore,
   InMemoryLinkedLeafStore,
   InMemoryMerkleTreeStorage,
+  PreloadingLinkedMerkleTreeStore,
 } from "@proto-kit/common";
 
 import { StoredLeaf } from "../async/AsyncLinkedMerkleTreeStore";
 
 // This is mainly used for supporting the rollbacks we need to do in case a runtimemethod fails
 // In this case everything should be preloaded in the parent async service
-export class SyncCachedLinkedMerkleTreeStore implements LinkedMerkleTreeStore {
+export class SyncCachedLinkedMerkleTreeStore
+  implements PreloadingLinkedMerkleTreeStore
+{
   private readonly leafStore = new InMemoryLinkedLeafStore();
 
   private readonly nodeStore = new InMemoryMerkleTreeStorage();
 
-  public constructor(private readonly parent: LinkedMerkleTreeStore) {}
+  public constructor(
+    private readonly parent: PreloadingLinkedMerkleTreeStore
+  ) {}
 
   public getNode(key: bigint, level: number): bigint | undefined {
     return (
@@ -46,6 +50,10 @@ export class SyncCachedLinkedMerkleTreeStore implements LinkedMerkleTreeStore {
       this.leafStore.getLeafLessOrEqual(path) ??
       this.parent.getLeafLessOrEqual(path)
     );
+  }
+
+  public async preloadKeys(path: bigint[]) {
+    await this.parent.preloadKeys(path);
   }
 
   public mergeIntoParent() {

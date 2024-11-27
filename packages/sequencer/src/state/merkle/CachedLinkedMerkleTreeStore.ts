@@ -3,7 +3,7 @@ import {
   InMemoryLinkedLeafStore,
   LinkedLeaf,
   InMemoryMerkleTreeStorage,
-  LinkedMerkleTreeStore,
+  PreloadingLinkedMerkleTreeStore,
 } from "@proto-kit/common";
 
 import {
@@ -12,7 +12,9 @@ import {
 } from "../async/AsyncMerkleTreeStore";
 import { AsyncLinkedMerkleTreeStore } from "../async/AsyncLinkedMerkleTreeStore";
 
-export class CachedLinkedMerkleTreeStore implements LinkedMerkleTreeStore {
+export class CachedLinkedMerkleTreeStore
+  implements PreloadingLinkedMerkleTreeStore
+{
   private writeCache: {
     nodes: {
       [key: number]: {

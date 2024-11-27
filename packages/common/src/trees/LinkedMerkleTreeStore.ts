@@ -14,3 +14,7 @@ export type LinkedLeaf = { value: bigint; path: bigint; nextPath: bigint };
 export interface LinkedMerkleTreeStore
   extends LinkedLeafStore,
     MerkleTreeStore {}
+
+export interface PreloadingLinkedMerkleTreeStore extends LinkedMerkleTreeStore {
+  preloadKeys(path: bigint[]): Promise<void>;
+}
