@@ -33,8 +33,6 @@ describe("cached linked merkle store", () => {
 
     const cache2 = new SyncCachedLinkedMerkleTreeStore(cache1);
     const tree2 = new LinkedMerkleTree(cache2);
-    // Need to preload 0n, as well since the nextPath of the leaf would have changed
-    // when other leaves were added.
 
     const leaf1 = tree1.getLeaf(16n);
     const leaf2 = tree1.getLeaf(46n);
