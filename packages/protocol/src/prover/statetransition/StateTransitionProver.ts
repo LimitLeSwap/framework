@@ -219,17 +219,12 @@ export class StateTransitionProverProgrammable extends ZkProgrammable<
         merkleWitness.leafPrevious.leaf.hash()
       );
 
-    // Only if we're doing an update.
-    const currentWitnessHolds =
-      merkleWitness.leafCurrent.merkleWitness.checkMembershipSimple(
-        state.stateRoot,
-        merkleWitness.leafCurrent.leaf.hash()
-      );
-
-    // Combine previousWitnessValid and currentWitnessHolds
+    // Combine previousWitnessValid and if it's an update
+    // it should just be true, as the prev leaf is just a dummy leaf
+    // so should always be true.
     const prevWitnessOrCurrentWitness = Provable.if(
       isUpdate,
-      currentWitnessHolds,
+      Bool(true),
       previousWitnessValid
     );
 
@@ -260,8 +255,8 @@ export class StateTransitionProverProgrammable extends ZkProgrammable<
 
     const rootAfterFirstStep = Provable.if(
       isUpdate,
-      rootWithLeafChanged,
-      state.stateRoot
+      state.stateRoot,
+      rootWithLeafChanged
     );
 
     // Need to check the second leaf is correct, i.e. leafCurrent.

@@ -266,6 +266,7 @@ export class TransactionTraceService {
   }> {
     const keys = this.allKeys(protocolTransitions.concat(stateTransitions));
 
+    const tree = new LinkedMerkleTree(merkleStore);
     // TODO Consolidate
     await merkleStore.preloadKey(0n);
     const runtimeSimulationMerkleStore = new SyncCachedLinkedMerkleTreeStore(
@@ -274,15 +275,6 @@ export class TransactionTraceService {
 
     await merkleStore.preloadKeys(keys.map((key) => key.toBigInt()));
 
-    // // TODO: Not efficient. Try to cache.
-    // for (const stateTransition of stateTransitions) {
-    //   // eslint-disable-next-line no-await-in-loop
-    //   await merkleStore.loadUpKeysForClosestPath(
-    //     stateTransition.path.toBigInt()
-    //   );
-    // }
-
-    const tree = new LinkedMerkleTree(merkleStore);
     const runtimeTree = new LinkedMerkleTree(runtimeSimulationMerkleStore);
     // const runtimeTree = new RollupMerkleTree(merkleStore);
     const initialRoot = tree.getRoot();

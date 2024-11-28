@@ -48,6 +48,8 @@ import { UntypedStateTransition } from "../helpers/UntypedStateTransition";
 import type { StateRecord } from "../BatchProducerModule";
 import { CachedLinkedMerkleTreeStore } from "../../../state/merkle/CachedLinkedMerkleTreeStore";
 import { AsyncLinkedMerkleTreeStore } from "../../../state/async/AsyncLinkedMerkleTreeStore";
+import { CachedMerkleTreeStore } from "../../../state/merkle/CachedMerkleTreeStore";
+import { AsyncMerkleTreeStore } from "../../../state/async/AsyncMerkleTreeStore";
 
 const errors = {
   methodIdNotFound: (methodId: string) =>
@@ -323,7 +325,7 @@ export class TransactionExecutionService {
   public async generateMetadataForNextBlock(
     block: Block,
     merkleTreeStore: AsyncLinkedMerkleTreeStore,
-    blockHashTreeStore: AsyncLinkedMerkleTreeStore,
+    blockHashTreeStore: AsyncMerkleTreeStore,
     modifyTreeStore = true
   ): Promise<BlockResult> {
     // Flatten diff list into a single diff by applying them over each other
@@ -342,8 +344,9 @@ export class TransactionExecutionService {
     const inMemoryStore =
       await CachedLinkedMerkleTreeStore.new(merkleTreeStore);
     const tree = new LinkedMerkleTree(inMemoryStore);
-    const blockHashInMemoryStore =
-      await CachedLinkedMerkleTreeStore.new(blockHashTreeStore);
+    const blockHashInMemoryStore = new CachedMerkleTreeStore(
+      blockHashTreeStore
+    );
     const blockHashTree = new BlockHashMerkleTree(blockHashInMemoryStore);
 
     await inMemoryStore.preloadKeys(Object.keys(combinedDiff).map(BigInt));

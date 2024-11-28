@@ -6,6 +6,7 @@ import {
 
 import { AsyncStateService } from "../state/async/AsyncStateService";
 import { AsyncLinkedMerkleTreeStore } from "../state/async/AsyncLinkedMerkleTreeStore";
+import { AsyncMerkleTreeStore } from "../state/async/AsyncMerkleTreeStore";
 
 import { BatchStorage } from "./repositories/BatchStorage";
 import { BlockQueue, BlockStorage } from "./repositories/BlockStorage";
@@ -21,7 +22,7 @@ export interface StorageDependencyMinimumDependencies extends DependencyRecord {
   blockStorage: DependencyDeclaration<BlockStorage>;
   unprovenStateService: DependencyDeclaration<AsyncStateService>;
   unprovenMerkleStore: DependencyDeclaration<AsyncLinkedMerkleTreeStore>;
-  blockTreeStore: DependencyDeclaration<AsyncLinkedMerkleTreeStore>;
+  blockTreeStore: DependencyDeclaration<AsyncMerkleTreeStore>;
   messageStorage: DependencyDeclaration<MessageStorage>;
   settlementStorage: DependencyDeclaration<SettlementStorage>;
   transactionStorage: DependencyDeclaration<TransactionStorage>;
