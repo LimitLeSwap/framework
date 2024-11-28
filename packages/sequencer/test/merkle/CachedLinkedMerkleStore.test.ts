@@ -1,4 +1,8 @@
-import { expectDefined, LinkedMerkleTree } from "@proto-kit/common";
+import {
+  expectDefined,
+  LinkedLeafStruct,
+  LinkedMerkleTree,
+} from "@proto-kit/common";
 import { beforeEach, expect } from "@jest/globals";
 import { Field, Poseidon } from "o1js";
 
@@ -457,5 +461,82 @@ describe("cached linked merkle store", () => {
     ).resolves.toStrictEqual([
       Poseidon.hash([Field(20), Field(20), Field(Field.ORDER - 1n)]).toBigInt(),
     ]);
+  });
+
+  it("mimic block production test && ST Prover", async () => {
+    // main store already has 0n and 5n paths defined.
+    // preloading 10n should load up 5n in the cache1 leaf and node stores.
+    await cache1.preloadKeys([10n, 10n, 10n]);
+    const state = tree1.getRoot();
+
+    // This is an insert as 10n is not already in the tree.
+    const witness1 = tree1.setLeaf(10n, 10n);
+    // This checks the right previous leaf was found.
+    expect(
+      witness1.leafPrevious.merkleWitness
+        .checkMembershipSimple(
+          state,
+          new LinkedLeafStruct({
+            value: Field(witness1.leafPrevious.leaf.value),
+            path: Field(witness1.leafPrevious.leaf.path),
+            nextPath: Field(witness1.leafPrevious.leaf.nextPath),
+          }).hash()
+        )
+        .toBoolean()
+    ).toStrictEqual(true);
+
+    // We now look to the state after the prevLeaf is changed.
+    // The prev leaf should be the 5n.
+    const rootAfterFirstChange =
+      witness1.leafPrevious.merkleWitness.calculateRoot(
+        new LinkedLeafStruct({
+          value: Field(witness1.leafPrevious.leaf.value),
+          path: Field(witness1.leafPrevious.leaf.path),
+          nextPath: Field(10n),
+        }).hash()
+      );
+    expect(
+      witness1.leafCurrent.merkleWitness.calculateRoot(Field(0)).toBigInt()
+    ).toStrictEqual(rootAfterFirstChange.toBigInt());
+
+    // We now check that right hashing was done to get to the current root.
+    expect(
+      witness1.leafCurrent.merkleWitness
+        .checkMembershipSimple(
+          tree1.getRoot(),
+          new LinkedLeafStruct({
+            value: Field(10n),
+            path: Field(10n),
+            nextPath: Field(witness1.leafPrevious.leaf.nextPath),
+          }).hash()
+        )
+        .toBoolean()
+    ).toStrictEqual(true);
+
+    // Now we update the node at 10n,
+    const witness2 = tree1.setLeaf(10n, 8n);
+    // We now check that right hashing was done to get to the current root.
+    expect(
+      witness2.leafCurrent.merkleWitness.calculateRoot(
+        new LinkedLeafStruct({
+          value: Field(8n),
+          path: Field(10n),
+          nextPath: Field(witness2.leafCurrent.leaf.nextPath),
+        }).hash()
+      )
+    ).toStrictEqual(tree1.getRoot());
+
+    // Now we update the node at 10n, again,
+    const witness3 = tree1.setLeaf(10n, 4n);
+    // We now check that right hashing was done to get to the current root.
+    expect(
+      witness3.leafCurrent.merkleWitness.calculateRoot(
+        new LinkedLeafStruct({
+          value: Field(4n),
+          path: Field(10n),
+          nextPath: Field(witness2.leafCurrent.leaf.nextPath),
+        }).hash()
+      )
+    ).toStrictEqual(tree1.getRoot());
   });
 });
