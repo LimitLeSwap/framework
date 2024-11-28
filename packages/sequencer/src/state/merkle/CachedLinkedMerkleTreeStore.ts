@@ -4,6 +4,7 @@ import {
   LinkedLeaf,
   InMemoryMerkleTreeStorage,
   PreloadingLinkedMerkleTreeStore,
+  mapSequential,
 } from "@proto-kit/common";
 
 import {
@@ -251,14 +252,18 @@ export class CachedLinkedMerkleTreeStore
   // Takes a list of paths and for each key collects the relevant nodes from the
   // parent tree and sets the leaf and node in the cached tree (and in-memory tree).
   public async preloadKey(path: bigint) {
-    const leaf = (await this.parent.getLeavesAsync([path]))[0];
+    const leaf =
+      this.leafStore.getLeaf(path) ??
+      (await this.parent.getLeavesAsync([path]))[0];
     if (leaf !== undefined) {
       this.leafStore.setLeaf(leaf.index, leaf.leaf);
       // Update
       await this.preloadNodes([leaf.index]);
     } else {
       // Insert
-      const previousLeaf = await this.parent.getLeafLessOrEqualAsync(path);
+      const previousLeaf =
+        this.leafStore.getLeafLessOrEqual(path) ??
+        (await this.parent.getLeafLessOrEqualAsync(path));
       if (previousLeaf === undefined) {
         throw Error("Previous Leaf should never be empty");
       }
@@ -270,12 +275,12 @@ export class CachedLinkedMerkleTreeStore
       if (maximumIndex === undefined) {
         throw Error("Maximum index should be defined in parent.");
       }
-      await this.preloadNodes([maximumIndex]);
+      await this.preloadNodes([maximumIndex + 1n]);
     }
   }
 
   public async preloadKeys(paths: bigint[]): Promise<void> {
-    await paths.forEach(async (x) => await this.preloadKey(x));
+    await mapSequential(paths, (x) => this.preloadKey(x));
   }
 
   // This merges the cache into the parent tree and resets the cache, but not the
