@@ -115,6 +115,7 @@ describe("ReductionTaskFlow", () => {
       creator
     );
 
+    // eslint-disable-next-line no-async-promise-executor
     const result = await new Promise(async (res) => {
       flow.onCompletion(async (output) => res(output));
 
