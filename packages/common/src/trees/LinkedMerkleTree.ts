@@ -277,11 +277,7 @@ export function createLinkedMerkleTree(
      * @param leaf New value.
      */
     private setMerkleLeaf(index: bigint, leaf: LinkedLeafStruct) {
-      this.setNode(
-        0,
-        index,
-        Poseidon.hash([leaf.value, leaf.path, leaf.nextPath])
-      );
+      this.setNode(0, index, leaf.hash());
       let tempIndex = index;
       for (
         let level = 1;
