@@ -56,12 +56,12 @@ export class InMemoryAsyncLinkedMerkleTreeStore
     });
   }
 
-  public getMaximumIndexAsync() {
-    return Promise.resolve(this.leafStore.getMaximumIndex());
+  public async getMaximumIndexAsync() {
+    return this.leafStore.getMaximumIndex();
   }
 
-  public getLeafLessOrEqualAsync(path: bigint) {
-    return Promise.resolve(this.leafStore.getLeafLessOrEqual(path));
+  public async getLeafLessOrEqualAsync(path: bigint) {
+    return this.leafStore.getLeafLessOrEqual(path);
   }
 
   public setLeaf(index: bigint, value: LinkedLeaf) {

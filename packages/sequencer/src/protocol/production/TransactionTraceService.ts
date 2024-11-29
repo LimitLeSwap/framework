@@ -268,7 +268,6 @@ export class TransactionTraceService {
 
     const tree = new LinkedMerkleTree(merkleStore);
     // TODO Consolidate
-    await merkleStore.preloadKey(0n);
     const runtimeSimulationMerkleStore = new SyncCachedLinkedMerkleTreeStore(
       merkleStore
     );
