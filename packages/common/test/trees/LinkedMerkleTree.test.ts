@@ -45,7 +45,7 @@ describe.each([4, 16, 254])("cachedMerkleTree - %s", (height) => {
     tree.setLeaf(1n, 1n);
     tree.setLeaf(5n, 5n);
 
-    const witness = tree.getWitness(5n).leafCurrent;
+    const witness = tree.getWitness(5n);
 
     expect(
       witness.merkleWitness
@@ -69,7 +69,7 @@ describe.each([4, 16, 254])("cachedMerkleTree - %s", (height) => {
     const witness = tree.getWitness(5n);
 
     expect(
-      witness.leafCurrent.merkleWitness.calculateRoot(Field(6)).toBigInt()
+      witness.merkleWitness.calculateRoot(Field(6)).toBigInt()
     ).not.toStrictEqual(tree.getRoot().toBigInt());
   });
 
@@ -79,7 +79,7 @@ describe.each([4, 16, 254])("cachedMerkleTree - %s", (height) => {
     tree.setLeaf(1n, 1n);
     tree.setLeaf(5n, 5n);
 
-    const witness = tree.getWitness(5n).leafCurrent;
+    const witness = tree.getWitness(5n);
 
     tree.setLeaf(5n, 10n);
 

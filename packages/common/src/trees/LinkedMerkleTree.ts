@@ -74,7 +74,9 @@ export interface AbstractLinkedMerkleTree {
    * @param path Position of the leaf node.
    * @returns The witness that belongs to the leaf.
    */
-  getWitness(path: bigint): LinkedMerkleTreeWitness;
+  getWitness(path: bigint): LinkedLeafAndMerkleWitness;
+
+  dummyWitness(): LinkedMerkleTreeWitness;
 }
 
 export interface AbstractLinkedMerkleTreeClass {
@@ -296,9 +298,12 @@ export function createLinkedMerkleTree(
      * @param path Position of the leaf node.
      * @param value New value.
      */
-    public setLeaf(path: bigint, value?: bigint) {
+    public setLeaf(path: bigint, value?: bigint): LinkedMerkleWitness {
       if (value === undefined) {
-        return this.getWitness(path);
+        return new LinkedMerkleWitness({
+          leafPrevious: this.dummy(),
+          leafCurrent: this.getWitness(path),
+        });
       }
       const storedLeaf = this.store.getLeaf(path);
       const prevLeaf = this.store.getLeafLessOrEqual(path);
@@ -317,7 +322,7 @@ export function createLinkedMerkleTree(
         if (tempIndex + 1n >= 2 ** height) {
           throw new Error("Index greater than maximum leaf number");
         }
-        witnessPrevious = this.getWitness(prevLeaf.leaf.path).leafCurrent;
+        witnessPrevious = this.getWitness(prevLeaf.leaf.path);
         const newPrevLeaf = {
           value: prevLeaf.leaf.value,
           path: prevLeaf.leaf.path,
@@ -355,7 +360,7 @@ export function createLinkedMerkleTree(
       );
       return new LinkedMerkleWitness({
         leafPrevious: witnessPrevious,
-        leafCurrent: witnessNext.leafCurrent,
+        leafCurrent: witnessNext,
       });
     }
 
@@ -390,7 +395,7 @@ export function createLinkedMerkleTree(
      * @param path of the leaf node.
      * @returns The witness that belongs to the leaf.
      */
-    public getWitness(path: bigint): LinkedMerkleWitness {
+    public getWitness(path: bigint): LinkedLeafAndMerkleWitness {
       const storedLeaf = this.store.getLeaf(path);
       let leaf;
       let currentIndex: bigint;
@@ -432,15 +437,12 @@ export function createLinkedMerkleTree(
         pathArray.push(sibling);
         currentIndex /= 2n;
       }
-      return new LinkedMerkleWitness({
-        leafPrevious: this.dummy(),
-        leafCurrent: new LinkedLeafAndMerkleWitness({
-          merkleWitness: new RollupMerkleWitnessV2({
-            path: pathArray,
-            isLeft: isLefts,
-          }),
-          leaf: leaf,
+      return new LinkedLeafAndMerkleWitness({
+        merkleWitness: new RollupMerkleWitnessV2({
+          path: pathArray,
+          isLeft: isLefts,
         }),
+        leaf: leaf,
       });
     }
 
@@ -457,6 +459,13 @@ export function createLinkedMerkleTree(
           path: Field(0),
           nextPath: Field(0),
         }),
+      });
+    }
+
+    public dummyWitness() {
+      return new LinkedMerkleWitness({
+        leafPrevious: this.dummy(),
+        leafCurrent: this.dummy(),
       });
     }
   };

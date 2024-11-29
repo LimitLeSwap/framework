@@ -95,9 +95,7 @@ export class StateTransitionProvableBatch extends Struct({
       batch.push(ProvableStateTransition.dummy());
       transitionTypes.push(ProvableStateTransitionType.normal);
       witnesses.push(
-        new LinkedMerkleTree(new InMemoryLinkedMerkleLeafStore()).getWitness(
-          BigInt(0)
-        )
+        new LinkedMerkleTree(new InMemoryLinkedMerkleLeafStore()).dummyWitness()
       );
     }
     return new StateTransitionProvableBatch({

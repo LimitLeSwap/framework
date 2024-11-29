@@ -327,19 +327,19 @@ describe("cached linked merkle store", () => {
     // The witness is from tree2, which comes from cache2,
     // but which because of the sync is really just cache1.
     expect(
-      witness.leafCurrent.merkleWitness
+      witness.merkleWitness
         .calculateRoot(
           Poseidon.hash([
-            witness.leafCurrent.leaf.value,
-            witness.leafCurrent.leaf.path,
-            witness.leafCurrent.leaf.nextPath,
+            witness.leaf.value,
+            witness.leaf.path,
+            witness.leaf.nextPath,
           ])
         )
         .toString()
     ).toBe(tree1.getRoot().toString());
 
     expect(
-      witness.leafCurrent.merkleWitness
+      witness.merkleWitness
         .calculateRoot(Poseidon.hash([Field(11), Field(5n), Field(10n)]))
         .toString()
     ).not.toBe(tree1.getRoot().toString());
@@ -347,12 +347,12 @@ describe("cached linked merkle store", () => {
     const witness2 = tree1.getWitness(10n);
 
     expect(
-      witness2.leafCurrent.merkleWitness
+      witness2.merkleWitness
         .calculateRoot(
           Poseidon.hash([
             Field(20),
             Field(10n),
-            witness2.leafCurrent.leaf.nextPath, // This is the maximum as the the leaf 10n should be the last
+            witness2.leaf.nextPath, // This is the maximum as the the leaf 10n should be the last
           ])
         )
         .toString()
