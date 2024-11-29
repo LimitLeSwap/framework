@@ -31,8 +31,8 @@ export class SyncCachedLinkedMerkleTreeStore
     this.nodeStore.setNode(key, level, value);
   }
 
-  public getLeaf(index: bigint): StoredLeaf | undefined {
-    return this.leafStore.getLeaf(index) ?? this.parent.getLeaf(index);
+  public getLeaf(path: bigint): StoredLeaf | undefined {
+    return this.leafStore.getLeaf(path) ?? this.parent.getLeaf(path);
   }
 
   public setLeaf(index: bigint, value: LinkedLeaf) {
@@ -42,7 +42,10 @@ export class SyncCachedLinkedMerkleTreeStore
   // Need to make sure we call the parent as the super will usually be empty
   // The tree calls this method.
   public getMaximumIndex(): bigint | undefined {
-    return this.parent.getMaximumIndex();
+    return (this.leafStore.getMaximumIndex() ?? -1) >
+      (this.parent.getMaximumIndex() ?? -1)
+      ? this.leafStore.getMaximumIndex()
+      : this.parent.getMaximumIndex();
   }
 
   public getLeafLessOrEqual(path: bigint): StoredLeaf | undefined {
