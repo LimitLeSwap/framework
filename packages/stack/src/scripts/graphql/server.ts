@@ -40,7 +40,7 @@ import {
   GraphqlSequencerModule,
   GraphqlServer,
   MempoolResolver,
-  MerkleWitnessResolver,
+  LinkedMerkleWitnessResolver,
   NodeStatusResolver,
   QueryGraphqlModule,
   BlockResolver,
@@ -122,7 +122,7 @@ export async function startServer() {
             BatchStorageResolver,
             BlockResolver,
             NodeStatusResolver,
-            MerkleWitnessResolver,
+            MerkleWitnessResolver: LinkedMerkleWitnessResolver,
           },
 
           config: {
