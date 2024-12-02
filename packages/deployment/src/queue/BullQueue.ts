@@ -1,13 +1,13 @@
 import { MetricsTime, Queue, QueueEvents, Worker } from "bullmq";
-import { log, mapSequential, noop } from "@proto-kit/common";
+import { log, noop } from "@proto-kit/common";
 import {
   TaskPayload,
   Closeable,
   InstantiatedQueue,
   TaskQueue,
-  SequencerModule,
   AbstractTaskQueue,
 } from "@proto-kit/sequencer";
+
 import { InstantiatedBullQueue } from "./InstantiatedBullQueue";
 
 export interface BullQueueConfig {
@@ -84,8 +84,8 @@ export class BullQueue
   }
 
   public async getQueue(queueName: string): Promise<InstantiatedQueue> {
-    const queue = this.createOrGetQueue(queueName, (name) => {
-      console.log(`Creating queue ${queueName}`);
+    return this.createOrGetQueue(queueName, (name) => {
+      log.debug(`Creating bull queue ${queueName}`);
 
       const { redis } = this.config;
 
@@ -96,8 +96,6 @@ export class BullQueue
 
       return new InstantiatedBullQueue(name, queue, events, this.config);
     });
-
-    return queue;
   }
 
   public async start() {
