@@ -101,8 +101,8 @@ export class GraphqlQueryTransportModule
         throw new Error("Witness json object malformed");
       }
 
-      assertStringArray(witnessJson.siblings);
-      assertBooleanArray(witnessJson.isLefts);
+      assertStringArray(witnessJson.merkleWitness.siblings);
+      assertBooleanArray(witnessJson.merkleWitness.isLefts);
 
       return new LinkedLeafAndMerkleWitness(
         LinkedLeafAndMerkleWitness.fromJSON({
