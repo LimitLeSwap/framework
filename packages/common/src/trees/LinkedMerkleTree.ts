@@ -7,11 +7,12 @@ import { range } from "../utils";
 import { LinkedMerkleTreeStore } from "./LinkedMerkleTreeStore";
 import {
   AbstractMerkleWitness,
+  createMerkleTree,
   maybeSwap,
-  RollupMerkleTreeWitness,
 } from "./RollupMerkleTree";
 import { InMemoryLinkedMerkleLeafStore } from "./InMemoryLinkedMerkleLeafStore";
 
+const RollupMerkleTreeWitness = createMerkleTree(40).WITNESS;
 export class LinkedLeafStruct extends Struct({
   value: Field,
   path: Field,

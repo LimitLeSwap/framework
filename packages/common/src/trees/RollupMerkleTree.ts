@@ -347,7 +347,7 @@ export function createMerkleTree(height: number): AbstractMerkleTreeClass {
   };
 }
 
-export class RollupMerkleTree extends createMerkleTree(40) {}
+export class RollupMerkleTree extends createMerkleTree(256) {}
 export class RollupMerkleTreeWitness extends RollupMerkleTree.WITNESS {}
 
 /**
