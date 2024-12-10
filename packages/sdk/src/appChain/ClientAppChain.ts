@@ -85,7 +85,7 @@ export class ClientAppChain<
       QueryTransportModule: {},
       NetworkStateTransportModule: {},
       GraphqlClient: {
-        url: "http://127.0.0.1:8080/graphql",
+        url: "http://localhost:8080/graphql",
       },
     });
 
