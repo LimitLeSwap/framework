@@ -57,7 +57,7 @@ export class Balances<Config = NoConfig>
   ): Promise<Balance> {
     const key = new BalancesKey({ tokenId, address });
     const balanceOption = await this.balances.get(key);
-    return Balance.Unsafe.fromField(balanceOption.value.value);
+    return Balance.Safe.fromField(balanceOption.value.value);
   }
 
   public async setBalance(
